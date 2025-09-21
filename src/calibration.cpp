@@ -2,10 +2,7 @@
 #include "globals.h"
 #include "calibration.h"
 #include "tachometer.h" // For calculateRPM()
-#include "papracode.h" // For getPressure() - needs to be defined
-
-// Forward declaration because getPressure is in the main .ino
-float getPressure();
+#include "main.h" // For getPressure()
 
 void runCalibration() {
   Serial.println(F("Entering calibration mode..."));

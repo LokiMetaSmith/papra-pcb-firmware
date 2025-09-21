@@ -11,7 +11,7 @@
 #include "alerts.h"
 #include "calibration.h"
 #include "battery.h"
-#include "papracode.h"
+#include "main.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
