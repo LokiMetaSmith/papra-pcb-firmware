@@ -45,14 +45,18 @@ extern float respiratory_rate;
 extern String serialCommand;
 extern bool apnea_alert_active;
 
-// Pin definitions (can be defined in header as they are const)
-const int analogBatt  = PIN_A1;
-const int analogPot   = PIN_A2;
+// Pin definitions for ATtiny3226 (20-pin)
+const int led1        = PIN_PC0;
+const int led2        = PIN_PC1;
+const int led3        = PIN_PC2;
+const int led4        = PIN_PC3;
+const int PWMPin      = PIN_PB0; // TCA0 PWM output
+const int buzzerPin   = PIN_PB1;
 const int tachPin     = PIN_PA3;
-const int led4        = PIN_PA4;
-const int led2        = PIN_PA6;
-const int led3        = PIN_PA7;
-const int PWMPin      = PIN_PA5;
+const int analogPot   = PIN_PD0;
+const int analogBatt  = PIN_PD1;
+// I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
+// UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
 
 // Constants (can be defined in header)
 const int battADCMax  =  1023;

@@ -44,30 +44,37 @@ bool apnea_alert_active = false;
 
 // the setup routine runs once when you press reset:
 void setup() {
-  // initialize the digital pin as an output.
+  // Initialize digital pins
   pinMode(tachPin, INPUT_PULLUP);
+  pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
 
-  // Configure TCB0 for PWM output on PA5
-  TCB0.CTRLB = TCB_CNTMODE_PWM8_gc | TCB_CCMPEN_bm;
-  TCB0.CTRLA = TCB_CLKSEL_CLKDIV2_gc | TCB_ENABLE_bm;
+  // Configure TCA0 for standard PWM on PWMPin (PB0)
+  TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc; // Single slope PWM
+  TCA0.SINGLE.PER = 0xFF; // 8-bit resolution
+  TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV4_gc | TCA_SINGLE_ENABLE_bm; // Enable with prescaler
 
-  // Route TWI0 to alternative pins (PB0/SCL, PB1/SDA)
-  PORTMUX.TWISPIROUTEA |= PORTMUX_TWI0_ALT1_gc;
+  // Initialize I2C on default pins (PA1, PA2)
   Wire.begin();
 
+  // Attach tachometer interrupt
   attachInterrupt(digitalPinToInterrupt(tachPin), tach_isr, FALLING);
 
+  // Initialize timers
   pid_last_time = millis();
   last_inhale_time = millis();
 
+  // Set initial pin states
+  digitalWrite(led1, HIGH);
   digitalWrite(led2, HIGH);
   digitalWrite(led3, HIGH);
   digitalWrite(led4, HIGH);
-  TCB0.CCMPH = maxPWM; //Turn on fan 100%
+  digitalWrite(buzzerPin, LOW);
+  analogWrite(PWMPin, maxPWM); // Turn on fan 100%
 
   Serial.begin(115200);
   Serial.println(F("Starting up PAPRA..."));
@@ -134,7 +141,7 @@ void loop() {
   }
 
   // Set the fan speed from either mode
-  TCB0.CCMPH = fanPWM;
+  analogWrite(PWMPin, fanPWM);
 
   // --- Serial Debug Output ---
   Serial.print(" pressure = ");      Serial.print((int)pressure);

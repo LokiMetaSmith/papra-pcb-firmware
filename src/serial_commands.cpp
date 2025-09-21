@@ -16,7 +16,7 @@ void runCalibration() {
   int prev_pwm = 0;
 
   for (int pwm = minPWM10p; pwm <= 255; pwm += 10) {
-    TCB0.CCMPH = pwm; // Direct register write for TCB0 PWM
+    analogWrite(PWMPin, pwm);
     delay(2000); // Wait 2 seconds for system to stabilize
 
     uint32_t currentRPM = calculateRPM();
@@ -43,7 +43,7 @@ void runCalibration() {
   }
 
   // Calibration finished, return to normal operation
-  TCB0.CCMPH = 0; // Turn off fan before resuming PID
+  analogWrite(PWMPin, 0); // Turn off fan before resuming PID
   Serial.println(F("Calibration finished."));
 }
 
