@@ -12,9 +12,9 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
 - [x] **Configuration Management:**
     - [x] Add serial commands to set PID constants, pressure setpoints, and alert thresholds.
     - [x] Store these configuration values in EEPROM to make them persistent.
-- [ ] **Improve Alerting:**
+- [x] **Improve Alerting:**
     - [x] Re-introduce the buzzer by migrating to a larger MCU.
-    - [ ] Implement a visual and audible alert system (e.g., flashing LEDs and sounding the buzzer).
+    - [x] Implement a visual and audible alert system (e.g., flashing LEDs and sounding the buzzer).
 - [ ] **Add a User Interface:**
     - [ ] Add support for an I2C OLED display to show real-time data (pressure, RPM, state, etc.).
 

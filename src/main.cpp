@@ -13,6 +13,7 @@
 #include "battery.h"
 #include "main.h"
 #include "eeprom_config.h"
+#include "input.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
@@ -39,6 +40,8 @@ unsigned long last_inhale_time = 0;
 float respiratory_rate = 0.0;
 String serialCommand;
 bool apnea_alert_active = false;
+bool alerts_muted = false;
+bool alert_active = false;
 // --- End of Global Variable Definitions ---
 
 
@@ -52,6 +55,7 @@ void setup() {
   pinMode(led4, OUTPUT);
   pinMode(buzzerPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
+  pinMode(muteButtonPin, INPUT_PULLUP);
 
   // Configure TCA0 for standard PWM on PWMPin (PB0)
   TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc; // Single slope PWM
@@ -101,8 +105,17 @@ void loop() {
   delay(25); // Main loop delay
 
   checkSerialCommands();
+  checkMuteButton();
   checkAlerts();
-  checkBattery();
+
+  // If an alert is active, override normal LED display with a visual alert
+  if (alert_active) {
+    triggerVisualAlert();
+    triggerAudibleAlert();
+  } else {
+    // Otherwise, run the normal battery status display
+    checkBattery();
+  }
 
   // --- Tachometer RPM Calculation ---
   fanRPM = calculateRPM();

@@ -44,6 +44,8 @@ extern unsigned long last_inhale_time;
 extern float respiratory_rate;
 extern String serialCommand;
 extern bool apnea_alert_active;
+extern bool alerts_muted;
+extern bool alert_active;
 
 // Pin definitions for ATtiny3226 (20-pin)
 const int led1        = PIN_PC0;
@@ -55,6 +57,7 @@ const int buzzerPin   = PIN_PB1;
 const int tachPin     = PIN_PA3;
 const int analogPot   = PIN_PD0;
 const int analogBatt  = PIN_PD1;
+const int muteButtonPin = PIN_PD2;
 // I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
 // UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
 
