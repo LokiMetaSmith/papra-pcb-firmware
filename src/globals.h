@@ -50,10 +50,13 @@ extern double pressure_history[10];
 extern int pressure_history_index;
 extern unsigned long last_inhale_time;
 extern float respiratory_rate;
+#include "menu.h" // For MenuState enum
+
 extern String serialCommand;
 extern bool apnea_alert_active;
 extern bool alerts_muted;
 extern bool alert_active;
+extern MenuState current_menu_state;
 
 // Pin definitions for ATtiny3226 (20-pin)
 const int led1        = PIN_PC0;
@@ -65,7 +68,9 @@ const int buzzerPin   = PIN_PB1;
 const int tachPin     = PIN_PA3;
 const int analogPot   = PIN_PD0;
 const int analogBatt  = PIN_PD1;
-const int muteButtonPin = PIN_PD2;
+const int rotary_A_pin = PIN_PD2;
+const int rotary_B_pin = PIN_PD3;
+const int rotary_SW_pin = PIN_PD4;
 // I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
 // UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
 

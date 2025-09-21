@@ -1,74 +1,92 @@
 #include "display.h"
+#include "menu.h" // For menu states
 
 // Timer for display refresh
 static unsigned long last_display_update = 0;
-const unsigned long display_update_interval = 250; // 4Hz
+const unsigned long display_update_interval = 200; // 5Hz
 
-void setupDisplay() {
-  // Initialize the OLED display
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
-    Serial.println(F("SSD1306 allocation failed"));
-    // Don't halt, the device can still function without a display.
-    return;
-  }
+// --- Private functions for this module ---
 
-  display.display();
-  delay(1000);
-
+void drawHomeScreen() {
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0,0);
+  display.setCursor(0, 0);
+
+  display.print(F("Press: ")); display.print((int)getPressure()); display.println(F(" Pa"));
+  display.print(F("Set:   ")); display.print((int)pid_setpoint); display.println(F(" Pa"));
+  display.print(F("Fan:   ")); display.print(fanRPM); display.println(F(" RPM"));
+  display.print(F("State: ")); display.println(currentBreathState == STATE_INHALE ? "Inhale" : "Exhale");
+  display.print(F("Mute:  ")); display.println(alerts_muted ? "ON" : "OFF");
+
+  if (alert_active) {
+    display.println(F("ALERT ACTIVE"));
+  } else {
+    display.println(F("Status: OK"));
+  }
+}
+
+void drawMenu() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+
+  switch (current_menu_state) {
+    case STATE_MAIN_MENU:
+      display.println(F("Main Menu"));
+      display.println(F("---------"));
+      display.print(selected_menu_item == 0 ? ">" : " "); display.println(F(" Set Kp"));
+      display.print(selected_menu_item == 1 ? ">" : " "); display.println(F(" Set Ki"));
+      display.print(selected_menu_item == 2 ? ">" : " "); display.println(F(" Set Kd"));
+      break;
+    case STATE_EDIT_KP:
+      display.println(F("Set Kp (Proportional)"));
+      display.println(F("---------------------"));
+      display.print(F("> ")); display.println(Kp);
+      break;
+    case STATE_EDIT_KI:
+      display.println(F("Set Ki (Integral)"));
+      display.println(F("-----------------"));
+      display.print(F("> ")); display.println(Ki);
+      break;
+    case STATE_EDIT_KD:
+      display.println(F("Set Kd (Derivative)"));
+      display.println(F("-------------------"));
+      display.print(F("> ")); display.println(Kd);
+      break;
+    default:
+      // Should not happen
+      break;
+  }
+}
+
+
+// --- Public functions ---
+
+void setupDisplay() {
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    return;
+  }
+  display.display();
+  delay(1000);
+  display.clearDisplay();
   display.println(F("PAPRA System Initialized"));
   display.display();
   delay(1000);
 }
 
 void updateDisplay() {
-  // Limit the refresh rate
   if (millis() - last_display_update < display_update_interval) {
     return;
   }
   last_display_update = millis();
 
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0);
-
-  // Line 1: Pressure
-  display.print(F("Press: "));
-  display.print((int)getPressure());
-  display.print(F(" Pa"));
-
-  // Line 2: Setpoint
-  display.setCursor(0, 10);
-  display.print(F("Set:   "));
-  display.print((int)pid_setpoint);
-  display.print(F(" Pa"));
-
-  // Line 3: Fan RPM
-  display.setCursor(0, 20);
-  display.print(F("Fan:   "));
-  display.print(fanRPM);
-  display.print(F(" RPM"));
-
-  // Line 4: Breathing State
-  display.setCursor(0, 30);
-  display.print(F("State: "));
-  display.print(currentBreathState == STATE_INHALE ? "Inhale" : "Exhale");
-
-  // Line 5: Mute Status
-  display.setCursor(0, 40);
-  display.print(F("Mute:  "));
-  display.print(alerts_muted ? "ON" : "OFF");
-
-  // Line 6: Alert Status
-  display.setCursor(0, 50);
-  if (alert_active) {
-    display.print(F("ALERT ACTIVE"));
+  if (current_menu_state == STATE_HOME_SCREEN) {
+    drawHomeScreen();
   } else {
-    display.print(F("Status: OK"));
+    drawMenu();
   }
 
   display.display();

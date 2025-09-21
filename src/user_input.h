@@ -3,6 +3,6 @@
 
 #include "globals.h"
 
-void checkMuteButton();
+void checkUserInput();
 
 #endif // INPUT_H

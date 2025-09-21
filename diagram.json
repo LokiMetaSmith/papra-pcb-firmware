@@ -34,11 +34,11 @@
     { "type": "wokwi-buzzer", "id": "bz1", "top": 100, "left": 0, "attrs": {} },
     { "type": "wokwi-potentiometer", "id": "pot1", "top": 100, "left": 50, "attrs": {} },
     {
-      "type": "wokwi-pushbutton",
-      "id": "btn1",
-      "top": 100,
-      "left": 120,
-      "attrs": { "color": "blue" }
+      "type": "wokwi-rotary-encoder",
+      "id": "encoder1",
+      "top": 90,
+      "left": 150,
+      "attrs": {}
     },
     { "type": "wokwi-resistor", "id": "r1", "top": 140, "left": -100, "attrs": { "value": "220" } },
     { "type": "wokwi-resistor", "id": "r2", "top": 140, "left": -80, "attrs": { "value": "220" } },
@@ -55,8 +55,8 @@
     { "type": "wokwi-resistor", "id": "r5", "top": 40, "left": -150, "attrs": { "value": "220" } }
   ],
   "connections": [
-    [ "mcu:VCC", "oled1:VCC", "bme1:VCC", "pot1:VCC", { "color": "red" } ],
-    [ "mcu:GND", "oled1:GND", "bme1:GND", "pot1:GND", "bz1:N", "btn1:2.r", "r1:2", "r2:2", "r3:2", "r4:2", "fan_pwm_led:C", { "color": "black" } ],
+    [ "mcu:VCC", "oled1:VCC", "bme1:VCC", "pot1:VCC", "encoder1:B", { "color": "red" } ],
+    [ "mcu:GND", "oled1:GND", "bme1:GND", "pot1:GND", "bz1:N", "encoder1:C", "r1:2", "r2:2", "r3:2", "r4:2", "fan_pwm_led:C", { "color": "black" } ],
 
     [ "mcu:PA1", "oled1:SDA", "bme1:SDA", { "color": "blue" } ],
     [ "mcu:PA2", "oled1:SCL", "bme1:SCL", { "color": "green" } ],
@@ -72,7 +72,10 @@
 
     [ "mcu:PB1", "bz1:P", { "color": "orange" } ],
     [ "mcu:PD0", "pot1:SIG", { "color": "purple" } ],
-    [ "mcu:PD2", "btn1:1.r", { "color": "blue" } ],
+
+    [ "mcu:PD2", "encoder1:A", { "color": "cyan" } ],
+    [ "mcu:PD3", "encoder1:B", { "color": "cyan" } ],
+    [ "mcu:PD4", "encoder1:SW", { "color": "blue" } ],
 
     [ "mcu:PA3", "tach_sim:OUT", { "color": "magenta", "label": "Tach" } ],
     [ "mcu:PB0", "fan_pwm_led:A", { "color": "white", "label": "PWM" } ],

@@ -13,8 +13,9 @@
 #include "battery.h"
 #include "main.h"
 #include "eeprom_config.h"
-#include "input.h"
+#include "user_input.h"
 #include "display.h"
+#include "menu.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
@@ -45,6 +46,7 @@ String serialCommand;
 bool apnea_alert_active = false;
 bool alerts_muted = false;
 bool alert_active = false;
+MenuState current_menu_state;
 // --- End of Global Variable Definitions ---
 
 
@@ -99,6 +101,7 @@ void setup() {
 
   // Initialize Display
   setupDisplay();
+  setupMenu();
 
   // Initialize pressure history buffer
   for(int i=0; i<10; i++) {
@@ -111,7 +114,7 @@ void loop() {
   delay(25); // Main loop delay
 
   checkSerialCommands();
-  checkMuteButton();
+  checkUserInput();
   checkAlerts();
 
   // If an alert is active, override normal LED display with a visual alert

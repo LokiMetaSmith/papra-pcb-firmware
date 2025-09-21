@@ -28,9 +28,9 @@ connectors:
     type: Piezo Buzzer
     pins: [IN, GND]
 
-  Mute_Button:
-    type: Push Button
-    pins: [P1, P2]
+  Rotary_Encoder:
+    type: Rotary Encoder + Switch
+    pins: [CLK, DT, SW, VCC, GND]
 
   Power_In:
     type: Power Jack
@@ -43,8 +43,8 @@ connectors:
 # Define the connections between the components.
 connections:
   # Power Connections
-  - ["Power_In:V_BATT", "MCU:VCC", "BME280:VCC", "Fan:VCC", "Potentiometer:VCC"]
-  - ["Power_In:GND", "MCU:GND", "BME280:GND", "Fan:GND", "Potentiometer:GND", "LED_Array:GND", "Buzzer:GND", "Mute_Button:P2", "Programmer:GND"]
+  - ["Power_In:V_BATT", "MCU:VCC", "BME280:VCC", "Fan:VCC", "Potentiometer:VCC", "Rotary_Encoder:VCC"]
+  - ["Power_In:GND", "MCU:GND", "BME280:GND", "Fan:GND", "Potentiometer:GND", "LED_Array:GND", "Buzzer:GND", "Rotary_Encoder:GND", "Programmer:GND"]
 
   # I2C Bus
   - ["MCU:PA1", "BME280:SDA"]
@@ -67,8 +67,10 @@ connections:
   - ["MCU:PD0", "Potentiometer:SIG"]
   - ["MCU:PD1", "Power_In:V_BATT", {label: "V_SENSE (via divider)"}]
 
-  # Digital Inputs
-  - ["MCU:PD2", "Mute_Button:P1"]
+  # Digital Inputs (Rotary Encoder)
+  - ["MCU:PD2", "Rotary_Encoder:CLK"]
+  - ["MCU:PD3", "Rotary_Encoder:DT"]
+  - ["MCU:PD4", "Rotary_Encoder:SW"]
 
   # Programming and Debug
   - ["MCU:PA0", "Programmer:UPDI"]
