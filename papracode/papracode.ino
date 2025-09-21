@@ -32,9 +32,13 @@
 #endif
 
 #include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
 
-// I2C address of the pressure sensor
-#define PRESSURE_SENSOR_ADDR 0x28
+// BME280 I2C address is 0x76 or 0x77. Using 0x76 as an example.
+#define BME280_I2C_ADDRESS 0x76
+
+Adafruit_BME280 bme; // I2C
 
 // Pin connections per PAPR V0.5 PCB
 // PA0 - UPDI/RESET
@@ -115,6 +119,25 @@ volatile unsigned long lastTachPulseTime = 0;
 volatile unsigned long tachPulseInterval = 0; // Time in microseconds for one revolution
 uint32_t fanRPM = 0;
 
+// PID Controller
+double pid_setpoint = 50.0; // Target pressure
+double Kp = 2.0, Ki = 0.5, Kd = 1.0;
+double pid_integral = 0, pid_derivative = 0, pid_last_error = 0;
+unsigned long pid_last_time = 0;
+
+// Breath Model
+enum BreathState { STATE_INHALE, STATE_EXHALE };
+BreathState currentBreathState = STATE_INHALE;
+double ipap_pressure = 60.0; // Inhalation Positive Airway Pressure
+double epap_pressure = 30.0; // Exhalation Positive Airway Pressure
+double initial_pressure = 0.0; // Store initial pressure to get gauge pressure
+double pressure_history[10]; // Short history of pressure readings
+int pressure_history_index = 0;
+
+// Serial Command Buffer
+String serialCommand;
+
+
 const int LEDFlashLoop  = 25; //decrease for 10% battery LED to blink faster
 
 // the setup routine runs once when you press reset:
@@ -139,6 +162,7 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(tachPin), tach_isr, FALLING);
 
+  pid_last_time = millis();
 
   //digitalWrite(led1, HIGH);
   digitalWrite(led2, HIGH);
@@ -156,6 +180,16 @@ void setup() {
   Serial.println("AtTiny 0/1/2-Series 14 pin");
   Serial.println("Tetra Bio Distributed 2021");
   Serial.println("MODIFIED: I2C Pressure sensor support");
+
+  // Initialize BME280 sensor
+  if (!bme.begin(BME280_I2C_ADDRESS)) {
+    Serial.println(F("Could not find a valid BME280 sensor, check wiring!"));
+    while (1) delay(10); // Halt
+  }
+
+  // Get initial pressure reading to use as a baseline for gauge pressure
+  initial_pressure = bme.readPressure();
+
   for (int i = 0; i <= 4; i++) { //startup knightrider 
     //digitalWrite(led1, LOW);  delay(onTime);
     //digitalWrite(led1, HIGH);
@@ -178,63 +212,37 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
   delay(25);
+  checkSerialCommands();
 
   // --- Tachometer RPM Calculation ---
-  unsigned long interval;
-  unsigned long last_pulse_time;
-  // Safely read the volatile variables
-  noInterrupts();
-  interval = tachPulseInterval;
-  last_pulse_time = lastTachPulseTime;
-  interrupts();
+  fanRPM = calculateRPM();
 
-  // Check if the fan is stalled (no pulse for a long time)
-  // Check for interval > 0 to avoid division by zero
-  if ( (micros() - last_pulse_time > 1000000) || (interval == 0) ) {
-    fanRPM = 0;
-  } else {
-    // RPM = (1 / (interval_in_us * 1e-6)) * (1 rev / 2 pulses) * (60 s / 1 min)
-    // RPM = 30,000,000 / interval
-    fanRPM = 30000000UL / interval;
-  }
+  // --- Bi-level Fan Control ---
 
-  // Read pressure first
+  // 1. Get the current pressure
   float pressure = getPressure();
 
-  //Clamp and rescale potentiometer input from a 10bit value to 8 bit
-  if (maxPWM > 0) {
-    rawADC = analogRead(analogPot);
-    fanPWM = map( rawADC, minPot, maxPot, minPWM, maxPWM ); //scale knob, 10 bits to 8 bits (v0.3 change)
-  }
-  else {
-    fanPWM = maxPWM;
-  }
+  // 2. Update the breath model to determine the current phase of breathing
+  updateBreathModel(pressure);
 
-  // Now, adjust fan speed based on pressure.
-  // If pressure is high, we want to reduce the fan speed to avoid fighting it.
-  const float highPressureThreshold = 70.0; // Start reducing speed above this pressure
-  const float maxPressure = 90.0; // At this pressure, speed should be at its minimum
+  // 3. Set the IPAP and EPAP pressures. Potentiometer controls IPAP.
+  rawADC = analogRead(analogPot);
+  // Map pot from 0-1023 to a pressure range of 40.0 to 90.0 for IPAP
+  ipap_pressure = 40.0 + ( (double)rawADC / 1023.0 ) * (50.0);
+  epap_pressure = 40.0; // Fixed EPAP for now
 
-  if (pressure > highPressureThreshold) {
-    // The pressure is high. Let's reduce the fan speed.
-    // We'll scale it linearly from the set speed down to minPWM
-    // as the pressure goes from highPressureThreshold to maxPressure.
-    // Using floating point math for accuracy before converting back to int.
-    float fanPWM_f = fanPWM;
-    float minPWM_f = minPWM;
-
-    // Calculate how far into the high-pressure zone we are (0.0 to 1.0+)
-    float factor = (pressure - highPressureThreshold) / (maxPressure - highPressureThreshold);
-    if (factor > 1.0) factor = 1.0; // Clamp at 1.0
-    if (factor < 0.0) factor = 0.0; // Clamp at 0.0 (shouldn't happen with this logic)
-
-    // The new PWM is a linear interpolation between the set PWM and minPWM
-    fanPWM_f = fanPWM_f - (fanPWM_f - minPWM_f) * factor;
-
-    fanPWM = (uint32_t)fanPWM_f;
+  // 4. Set the PID setpoint based on the breathing state
+  if (currentBreathState == STATE_INHALE) {
+    pid_setpoint = ipap_pressure;
+  } else {
+    pid_setpoint = epap_pressure;
   }
 
-  analogWrite(PWMPin, fanPWM);
+  // 5. Compute the new fan PWM using the PID controller
+  fanPWM = computePID(pressure);
+
+  // 6. Set the fan speed
+  TCB0.CCMPH = fanPWM; // Direct register write for TCB0 PWM
   battery = battery = ( ( battery * ( numBatterySamples - 1 ) ) + analogRead(analogBatt) ) / numBatterySamples;
   switch (battery) {
     case battADC78p ... battADCMax: // Full = 78% - 100%
@@ -312,6 +320,8 @@ void loop() {
   Serial.print(" rawADC = ");        Serial.print(rawADC);
   // Can't print floats on this platform by default, so printing pressure as int
   Serial.print(" pressure = ");      Serial.print((int)pressure);
+  Serial.print(" setpoint = ");      Serial.print((int)pid_setpoint);
+  Serial.print(" state = ");         Serial.print(currentBreathState == STATE_INHALE ? "Inhale" : "Exhale");
   Serial.print(" pwm = ");           Serial.print(fanPWM);
   Serial.print(" rpm = ");           Serial.print(fanRPM);
   Serial.print(" Battery State = "); Serial.println(batteryState);
@@ -319,19 +329,17 @@ void loop() {
 }
 
 /**
- * @brief Reads the pressure from the I2C sensor.
+ * @brief Reads the gauge pressure from the BME280 I2C sensor.
  *
- * @return float The pressure in a generic unit.
- *
- * This is a placeholder function. It should be replaced with the actual
- * implementation for the pressure sensor. It returns a value between 0 and 100.
+ * @return float The gauge pressure in Pascals (Pa), relative to the
+ *               pressure at startup.
  */
 float getPressure() {
-  // Simulate pressure reading for now
-  // This will be replaced with actual I2C communication
-  // to the pressure sensor.
-  // For now, return a value that changes over time to test the logic
-  return 50.0 + 30.0 * sin(millis() / 1000.0);
+  // Return the current pressure minus the initial pressure to get gauge pressure.
+  // This allows the system to measure pressure changes from ambient.
+  // The PID controller and breath model will now work with small positive/negative
+  // pressure values, which is much easier to tune.
+  return bme.readPressure() - initial_pressure;
 }
 
 /**
@@ -341,8 +349,139 @@ float getPressure() {
  * It measures the time interval between pulses.
  * NOTE: Fans often produce 2 pulses per revolution.
  */
+uint32_t calculateRPM() {
+  unsigned long interval;
+  unsigned long last_pulse_time;
+  // Safely read the volatile variables
+  noInterrupts();
+  interval = tachPulseInterval;
+  last_pulse_time = lastTachPulseTime;
+  interrupts();
+
+  // Check if the fan is stalled (no pulse for a long time)
+  // Check for interval > 0 to avoid division by zero
+  if ( (micros() - last_pulse_time > 1000000) || (interval == 0) ) {
+    return 0;
+  } else {
+    // RPM = (1 / (interval_in_us * 1e-6)) * (1 rev / 2 pulses) * (60 s / 1 min)
+    // RPM = 30,000,000 / interval
+    return 30000000UL / interval;
+  }
+}
+
 void tach_isr() {
   unsigned long now = micros();
   tachPulseInterval = now - lastTachPulseTime;
   lastTachPulseTime = now;
+}
+
+/**
+ * @brief Computes the PID output for fan speed control.
+ *
+ * @param current_pressure The measured pressure from the sensor.
+ * @return int The calculated PWM value for the fan.
+ */
+void runCalibration() {
+  Serial.println(F("Entering calibration mode..."));
+  Serial.println(F("PWM,RPM,Pressure"));
+
+  // Turn off PID control during calibration
+  // by setting fan speed directly.
+
+  for (int pwm = minPWM10p; pwm <= 255; pwm += 10) {
+    TCB0.CCMPH = pwm; // Direct register write for TCB0 PWM
+    delay(2000); // Wait 2 seconds for system to stabilize
+
+    uint32_t currentRPM = calculateRPM();
+    float currentPressure = getPressure();
+
+    Serial.print(pwm);
+    Serial.print(F(","));
+    Serial.print(currentRPM);
+    Serial.print(F(","));
+    Serial.println(currentPressure);
+  }
+
+  // Calibration finished, return to normal operation
+  analogWrite(PWMPin, 0); // Turn off fan before resuming PID
+  Serial.println(F("Calibration finished."));
+}
+
+void updateBreathModel(double current_pressure) {
+  // Store current pressure in history (circular buffer)
+  pressure_history[pressure_history_index] = current_pressure;
+
+  // Get the oldest sample's index
+  int oldest_index = (pressure_history_index + 1) % 10;
+
+  // Calculate pressure slope. This is a very simple approximation.
+  double slope = pressure_history[pressure_history_index] - pressure_history[oldest_index];
+
+#if 0
+  Serial.print("Slope: "); Serial.println(slope);
+#endif
+
+  pressure_history_index = (pressure_history_index + 1) % 10;
+
+  // Define slope thresholds for switching states. These will need tuning.
+  double inhale_trigger_slope = 1.5;
+  double exhale_trigger_slope = -1.5;
+
+  if (currentBreathState == STATE_INHALE) {
+    // If we are inhaling, look for a negative slope to switch to exhale
+    if (slope < exhale_trigger_slope) {
+      currentBreathState = STATE_EXHALE;
+    }
+  } else { // STATE_EXHALE
+    // If we are exhaling, look for a positive slope to switch to inhale
+    if (slope > inhale_trigger_slope) {
+      currentBreathState = STATE_INHALE;
+    }
+  }
+}
+
+void checkSerialCommands() {
+  while (Serial.available() > 0) {
+    char c = (char)Serial.read();
+    if (c == '\n' || c == '\r') {
+      serialCommand.trim();
+      if (serialCommand.equalsIgnoreCase("calibrate")) {
+        runCalibration();
+      }
+      serialCommand = "";
+    } else {
+      serialCommand += c;
+    }
+  }
+}
+
+int computePID(double current_pressure) {
+  unsigned long now = millis();
+  double time_change = (double)(now - pid_last_time);
+
+  // This PID implementation is time-dependent.
+  // We only re-calculate if a certain amount of time has passed.
+  if (time_change < 20) { // Sample time of 20ms
+    return fanPWM; // Return last computed value
+  }
+
+  double error = pid_setpoint - current_pressure;
+
+  // Integral term with anti-windup
+  pid_integral += error * time_change;
+  if (pid_integral > maxPWM) pid_integral = maxPWM;
+  if (pid_integral < minPWM) pid_integral = minPWM;
+
+  pid_derivative = (error - pid_last_error) / time_change;
+
+  double output = Kp * error + Ki * pid_integral + Kd * pid_derivative;
+
+  pid_last_error = error;
+  pid_last_time = now;
+
+  // Clamp the output to the valid PWM range
+  if (output > maxPWM) output = maxPWM;
+  if (output < minPWM) output = minPWM;
+
+  return (int)output;
 }
