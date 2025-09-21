@@ -1,0 +1,4 @@
+[wokwi]
+version = 1
+firmware = 'platformio'
+elf = ".pio/build/ATtiny3226/firmware.elf"

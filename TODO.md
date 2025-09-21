@@ -22,6 +22,6 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
 ## 3. Code & Testing
 - [x] **Hardware Documentation & Simulation:**
     - [x] Create `wireviz` source file (`wiring.yml`) for hardware documentation.
-    - [ ] Create Wokwi simulation configuration (`wokwi.toml`, `diagram.json`).
+    - [x] Create Wokwi simulation configuration (`wokwi.toml`, `diagram.json`).
 - [ ] **Advanced Breath Modeling:**
     - [ ] Improve the breath detection algorithm for higher accuracy and robustness.
