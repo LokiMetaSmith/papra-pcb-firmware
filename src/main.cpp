@@ -14,11 +14,14 @@
 #include "main.h"
 #include "eeprom_config.h"
 #include "input.h"
+#include "display.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
 Adafruit_BME280 bme;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 int batteryState = batteryCheck;
+int loopDelay = 25;
 uint32_t fanPWM = 0;
 uint32_t minPWM = minPWM10p;
 uint32_t maxPWM = 255;
@@ -94,6 +97,9 @@ void setup() {
   // Get initial pressure reading to use as a baseline for gauge pressure
   initial_pressure = bme.readPressure();
 
+  // Initialize Display
+  setupDisplay();
+
   // Initialize pressure history buffer
   for(int i=0; i<10; i++) {
     pressure_history[i] = 0;
@@ -155,6 +161,9 @@ void loop() {
 
   // Set the fan speed from either mode
   analogWrite(PWMPin, fanPWM);
+
+  // Update the OLED display
+  updateDisplay();
 
   // --- Serial Debug Output ---
   Serial.print(" pressure = ");      Serial.print((int)pressure);

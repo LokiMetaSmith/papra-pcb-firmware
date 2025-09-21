@@ -15,8 +15,9 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
 - [x] **Improve Alerting:**
     - [x] Re-introduce the buzzer by migrating to a larger MCU.
     - [x] Implement a visual and audible alert system (e.g., flashing LEDs and sounding the buzzer).
-- [ ] **Add a User Interface:**
-    - [ ] Add support for an I2C OLED display to show real-time data (pressure, RPM, state, etc.).
+- [x] **Add a User Interface:**
+    - [x] Add support for an I2C OLED display to show real-time data (pressure, RPM, state, etc.).
+    - [ ] Implement a configuration menu using the display and additional buttons.
 
 ## 3. Code & Testing
 - [x] **Hardware Documentation & Simulation:**

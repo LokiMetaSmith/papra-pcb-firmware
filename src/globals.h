@@ -10,6 +10,11 @@
 // BME280 I2C address is 0x76 or 0x77. Using 0x76 as an example.
 #define BME280_I2C_ADDRESS 0x76
 
+// OLED Display settings
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 // Struct for storing configuration in EEPROM
 struct Config {
   uint32_t magic_number; // To check if EEPROM is initialized
@@ -18,8 +23,11 @@ struct Config {
   double Kd;
 };
 
+#include <Adafruit_SSD1306.h>
+
 // Extern declarations for global variables defined in papracode.ino
 extern Adafruit_BME280 bme;
+extern Adafruit_SSD1306 display;
 extern int batteryState;
 extern int loopDelay;
 extern uint32_t fanPWM;
