@@ -31,29 +31,34 @@
 #error "This sketch is written for use with TCB0 as the millis timing source"
 #endif
 
+#include <Wire.h>
+
+// I2C address of the pressure sensor
+#define PRESSURE_SENSOR_ADDR 0x28
+
 // Pin connections per PAPR V0.5 PCB
 // PA0 - UPDI/RESET
 // PA1 - ADC - BATTERY
 // PA2 - ADC = POTENTIOMETER
-// PA3 - UNUSED
+// PA3 - TACHOMETER INPUT
 // PA4 - LED4 
-// PA5 - LED1
+// PA5 - PWM - FAN (was LED1)
 // PA6 - LED2
 // PA7 - LED3
-// PB0 - PWM - FAN (uses Timer TCA0)
-// PB1 - BUZZER
+// PB0 - I2C SCL (was PWM)
+// PB1 - I2C SDA (was Buzzer)
 // PB2 - UART TX
 // PB3 - UART RX
 
 int analogBatt  = PIN_A1;  // AIN1 - 10 bit resolution on ADC 
 int analogPot   = PIN_A2;  // AIN2 - Fan speed control POT with on/off switch
-//int UNUSED    = PIN_PA3; //v0.5 change
+int tachPin     = PIN_PA3;
 int led4        = PIN_PA4; //v0.5 change
-int led1        = PIN_PA5;
+//int led1        = PIN_PA5; // Sacrificed for PWM fan output
 int led2        = PIN_PA6;
 int led3        = PIN_PA7;
-int PWMPin      = PIN_PB0; // W00 8 bit resolution with Arduino AnalogWrite (v0.3 change)
-int buzzerPin   = PIN_PB1; //v0.5 change
+int PWMPin      = PIN_PA5; // W00 8 bit resolution with Arduino AnalogWrite (v0.3 change)
+//int buzzerPin   = PIN_PB1; // Sacrificed for I2C SDA
 
 // Battery Voltage to Fuel Gauge
 // > 4.12V/Cell = 100% - 78% Battery  = 4 LEDs         => 899 > adc > 864
@@ -105,27 +110,41 @@ uint32_t minPWM = minPWM10p;
 uint32_t maxPWM = 255;
 uint32_t rawADC = 0;
 
+// Tachometer measurement
+volatile unsigned long lastTachPulseTime = 0;
+volatile unsigned long tachPulseInterval = 0; // Time in microseconds for one revolution
+uint32_t fanRPM = 0;
+
 const int LEDFlashLoop  = 25; //decrease for 10% battery LED to blink faster
 
 // the setup routine runs once when you press reset:
 void setup() {
   // initialize the digital pin as an output.
-  pinMode(led1, OUTPUT);
+  pinMode(tachPin, INPUT_PULLUP);
+  //pinMode(led1, OUTPUT);
   pinMode(led2, OUTPUT);
   pinMode(led3, OUTPUT);
   pinMode(led4, OUTPUT);
-  pinMode(buzzerPin, OUTPUT);
-  pinMode(PWMPin, OUTPUT);  //PB0 - TCA0 WO0, pin9 on 14-pin parts
-  //See http://ww1.microchip.com/downloads/en/Appnotes/TB3217-Getting-Started-with-TCA-DS90003217.pdf
-  TCA0.SINGLE.CTRLB = ( TCA_SINGLE_CMP2EN_bm  | TCA_SINGLE_WGMODE_SINGLESLOPE_gc ); //Single PWM on WO0 singleslope
-  TCA0.SINGLE.PER   = 0xFF; // Count down from 255 on WO0/WO1/WO2
-  TCA0.SINGLE.CTRLA = ( TCA_SINGLE_CLKSEL_DIV4_gc | TCA_SINGLE_ENABLE_bm ); //enable the timer with prescaler of 4
+  //pinMode(buzzerPin, OUTPUT);
+  pinMode(PWMPin, OUTPUT);  //PA5 - TCB0 WO
 
-  digitalWrite(led1, HIGH);
+  // Configure TCB0 for PWM output on PA5
+  TCB0.CTRLB = TCB_CNTMODE_PWM8_gc | TCB_CCMPEN_bm;
+  TCB0.CTRLA = TCB_CLKSEL_CLKDIV2_gc | TCB_ENABLE_bm;
+
+  // Route TWI0 to alternative pins (PB0/SCL, PB1/SDA)
+  // IMPORTANT: This requires hardware modification if the PCB is not designed for it.
+  PORTMUX.TWISPIROUTEA |= PORTMUX_TWI0_ALT1_gc;
+  Wire.begin();
+
+  attachInterrupt(digitalPinToInterrupt(tachPin), tach_isr, FALLING);
+
+
+  //digitalWrite(led1, HIGH);
   digitalWrite(led2, HIGH);
   digitalWrite(led3, HIGH);
   digitalWrite(led4, HIGH);
-  digitalWrite(buzzerPin,LOW);
+  //digitalWrite(buzzerPin,LOW);
   digitalWrite(PWMPin, maxPWM); //Turn on fan 100%
 #ifdef TWOKFLASHCHIP
   delay(1000);
@@ -136,9 +155,10 @@ void setup() {
   Serial.println("PCB v0.5");
   Serial.println("AtTiny 0/1/2-Series 14 pin");
   Serial.println("Tetra Bio Distributed 2021");
+  Serial.println("MODIFIED: I2C Pressure sensor support");
   for (int i = 0; i <= 4; i++) { //startup knightrider 
-    digitalWrite(led1, LOW);  delay(onTime);
-    digitalWrite(led1, HIGH); 
+    //digitalWrite(led1, LOW);  delay(onTime);
+    //digitalWrite(led1, HIGH);
     digitalWrite(led2, LOW);  delay(onTime);
     digitalWrite(led2, HIGH); 
     digitalWrite(led3, LOW);  delay(onTime);
@@ -149,8 +169,8 @@ void setup() {
     digitalWrite(led3, HIGH); 
     digitalWrite(led2, LOW);  delay(onTime);
     digitalWrite(led2, HIGH); 
-    digitalWrite(led1, LOW);  delay(onTime);
-    digitalWrite(led1, HIGH); delay(offTime);
+    //digitalWrite(led1, LOW);  delay(onTime);
+    //digitalWrite(led1, HIGH); delay(offTime);
   }
 #endif
 }
@@ -158,21 +178,69 @@ void setup() {
 // the loop routine runs over and over again forever:
 void loop() {
   delay(25);
+
+  // --- Tachometer RPM Calculation ---
+  unsigned long interval;
+  unsigned long last_pulse_time;
+  // Safely read the volatile variables
+  noInterrupts();
+  interval = tachPulseInterval;
+  last_pulse_time = lastTachPulseTime;
+  interrupts();
+
+  // Check if the fan is stalled (no pulse for a long time)
+  // Check for interval > 0 to avoid division by zero
+  if ( (micros() - last_pulse_time > 1000000) || (interval == 0) ) {
+    fanRPM = 0;
+  } else {
+    // RPM = (1 / (interval_in_us * 1e-6)) * (1 rev / 2 pulses) * (60 s / 1 min)
+    // RPM = 30,000,000 / interval
+    fanRPM = 30000000UL / interval;
+  }
+
+  // Read pressure first
+  float pressure = getPressure();
+
   //Clamp and rescale potentiometer input from a 10bit value to 8 bit
   if (maxPWM > 0) {
     rawADC = analogRead(analogPot);
     fanPWM = map( rawADC, minPot, maxPot, minPWM, maxPWM ); //scale knob, 10 bits to 8 bits (v0.3 change)
-  } 
+  }
   else {
     fanPWM = maxPWM;
-  }  
+  }
+
+  // Now, adjust fan speed based on pressure.
+  // If pressure is high, we want to reduce the fan speed to avoid fighting it.
+  const float highPressureThreshold = 70.0; // Start reducing speed above this pressure
+  const float maxPressure = 90.0; // At this pressure, speed should be at its minimum
+
+  if (pressure > highPressureThreshold) {
+    // The pressure is high. Let's reduce the fan speed.
+    // We'll scale it linearly from the set speed down to minPWM
+    // as the pressure goes from highPressureThreshold to maxPressure.
+    // Using floating point math for accuracy before converting back to int.
+    float fanPWM_f = fanPWM;
+    float minPWM_f = minPWM;
+
+    // Calculate how far into the high-pressure zone we are (0.0 to 1.0+)
+    float factor = (pressure - highPressureThreshold) / (maxPressure - highPressureThreshold);
+    if (factor > 1.0) factor = 1.0; // Clamp at 1.0
+    if (factor < 0.0) factor = 0.0; // Clamp at 0.0 (shouldn't happen with this logic)
+
+    // The new PWM is a linear interpolation between the set PWM and minPWM
+    fanPWM_f = fanPWM_f - (fanPWM_f - minPWM_f) * factor;
+
+    fanPWM = (uint32_t)fanPWM_f;
+  }
+
   analogWrite(PWMPin, fanPWM);
   battery = battery = ( ( battery * ( numBatterySamples - 1 ) ) + analogRead(analogBatt) ) / numBatterySamples;
   switch (battery) {
     case battADC78p ... battADCMax: // Full = 78% - 100%
       if (batteryState > batteryFull) {
         batteryState = batteryFull;
-        digitalWrite(led1, LOW);  //All LEDs ON
+        //digitalWrite(led1, LOW);  //All LEDs ON (led1 sacrificed)
         digitalWrite(led2, LOW);
         digitalWrite(led3, LOW);
         digitalWrite(led4, LOW);
@@ -182,7 +250,7 @@ void loop() {
     case battADC55p ... ( battADC78p - 1 ): // 75% = 55% - 77%
       if (batteryState > battery75p) {
         batteryState = battery75p;
-        digitalWrite(led1, LOW);  //3 LEDs ON
+        //digitalWrite(led1, LOW);  //3 LEDs ON (led1 sacrificed)
         digitalWrite(led2, LOW);
         digitalWrite(led3, LOW);
         digitalWrite(led4, HIGH);
@@ -192,7 +260,7 @@ void loop() {
     case battADC33p ... ( battADC55p - 1 ): // 50% = 33% - 54%
       if (batteryState > battery50p) {
         batteryState = battery50p;
-        digitalWrite(led1, LOW);  //2 LEDs ON
+        //digitalWrite(led1, LOW);  //2 LEDs ON (led1 sacrificed)
         digitalWrite(led2, LOW);
         digitalWrite(led3, HIGH);
         digitalWrite(led4, HIGH);
@@ -202,8 +270,8 @@ void loop() {
     case battADC10p ... ( battADC33p -1 ): // 25% = 10% - 32%
       if (batteryState > battery25p) {
         batteryState = battery25p;
-        digitalWrite(led1, LOW);  //1 LED on
-        digitalWrite(led2, HIGH);
+        //digitalWrite(led1, LOW);  //1 LED on (led1 sacrificed)
+        digitalWrite(led2, LOW); // Solid LED2
         digitalWrite(led3, HIGH);
         digitalWrite(led4, HIGH);
         minPWM = minPWM25p;
@@ -212,18 +280,17 @@ void loop() {
     case battADC0p ... ( battADC10p - 1) : // 10% - Need to blink LED
       if (batteryState > battery10p) {
         batteryState = battery10p;
-        digitalWrite(led2, HIGH); //1 LED blinking
         digitalWrite(led3, HIGH);
         digitalWrite(led4, HIGH);
-        digitalWrite(led1, LOW);
-        digitalWrite(buzzerPin, HIGH);
+        //digitalWrite(led1, LOW); // Sacrificed
+        //digitalWrite(buzzerPin, HIGH); // Sacrificed
         minPWM = minPWM10p;
       }
       break;
     case battADCMin ... (battADC0p - 1 ): // Shutdown
       if (batteryState > batteryDead) {
         batteryState = batteryDead;
-        digitalWrite(led1, HIGH); //All LEDs off
+        //digitalWrite(led1, HIGH); //All LEDs off
         digitalWrite(led2, HIGH);
         digitalWrite(led3, HIGH);
         digitalWrite(led4, HIGH);
@@ -231,10 +298,10 @@ void loop() {
       }
       break;
   }
-  // For battery state of 0-10%, need to blink LED1 to indicate almost dead battery
+  // For battery state of 0-10%, need to blink LED2 to indicate almost dead battery
   if (batteryState == battery10p){
     if (blinkCounter++ > LEDFlashLoop) {
-      digitalWrite(led1, !digitalRead(led1));
+      digitalWrite(led2, !digitalRead(led2));
       blinkCounter = 0;
     }
   }  
@@ -243,7 +310,39 @@ void loop() {
 #else
   Serial.print(" Battery = ");       Serial.print(battery);
   Serial.print(" rawADC = ");        Serial.print(rawADC);
+  // Can't print floats on this platform by default, so printing pressure as int
+  Serial.print(" pressure = ");      Serial.print((int)pressure);
   Serial.print(" pwm = ");           Serial.print(fanPWM);
+  Serial.print(" rpm = ");           Serial.print(fanRPM);
   Serial.print(" Battery State = "); Serial.println(batteryState);
 #endif
+}
+
+/**
+ * @brief Reads the pressure from the I2C sensor.
+ *
+ * @return float The pressure in a generic unit.
+ *
+ * This is a placeholder function. It should be replaced with the actual
+ * implementation for the pressure sensor. It returns a value between 0 and 100.
+ */
+float getPressure() {
+  // Simulate pressure reading for now
+  // This will be replaced with actual I2C communication
+  // to the pressure sensor.
+  // For now, return a value that changes over time to test the logic
+  return 50.0 + 30.0 * sin(millis() / 1000.0);
+}
+
+/**
+ * @brief Interrupt Service Routine for the fan tachometer.
+ *
+ * This ISR is called on each pulse from the fan's tachometer.
+ * It measures the time interval between pulses.
+ * NOTE: Fans often produce 2 pulses per revolution.
+ */
+void tach_isr() {
+  unsigned long now = micros();
+  tachPulseInterval = now - lastTachPulseTime;
+  lastTachPulseTime = now;
 }
