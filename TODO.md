@@ -9,9 +9,9 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
 - [ ] Perform an initial calibration run to establish a baseline for filter health.
 
 ## 2. Feature Enhancements
-- [ ] **Configuration Management:**
-    - [ ] Add serial commands to set PID constants, pressure setpoints, and alert thresholds.
-    - [ ] Store these configuration values in EEPROM to make them persistent.
+- [x] **Configuration Management:**
+    - [x] Add serial commands to set PID constants, pressure setpoints, and alert thresholds.
+    - [x] Store these configuration values in EEPROM to make them persistent.
 - [ ] **Improve Alerting:**
     - [ ] Implement a visual alert system (e.g., flashing all LEDs in a specific pattern).
 - [ ] **Add a User Interface:**

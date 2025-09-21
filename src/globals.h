@@ -5,9 +5,18 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <EEPROM.h>
 
 // BME280 I2C address is 0x76 or 0x77. Using 0x76 as an example.
 #define BME280_I2C_ADDRESS 0x76
+
+// Struct for storing configuration in EEPROM
+struct Config {
+  uint32_t magic_number; // To check if EEPROM is initialized
+  double Kp;
+  double Ki;
+  double Kd;
+};
 
 // Extern declarations for global variables defined in papracode.ino
 extern Adafruit_BME280 bme;

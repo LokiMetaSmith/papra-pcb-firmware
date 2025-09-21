@@ -9,9 +9,10 @@
 #include "pid_controller.h"
 #include "breath_model.h"
 #include "alerts.h"
-#include "calibration.h"
+#include "serial_commands.h"
 #include "battery.h"
 #include "main.h"
+#include "eeprom_config.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
@@ -70,6 +71,8 @@ void setup() {
 
   Serial.begin(115200);
   Serial.println(F("Starting up PAPRA..."));
+
+  loadConfig(); // Load settings from EEPROM or save defaults
 
   // Initialize BME280 sensor
   if (!bme.begin(BME280_I2C_ADDRESS)) {
