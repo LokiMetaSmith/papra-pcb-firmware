@@ -40,8 +40,14 @@ double epap_pressure = 30.0;
 double initial_pressure = 0.0;
 double pressure_history[10];
 int pressure_history_index = 0;
+double pressure_filter_buffer[5];
+int pressure_filter_index = 0;
 unsigned long last_inhale_time = 0;
 float respiratory_rate = 0.0;
+double peak_inhale_slope = 0.0;
+double peak_exhale_slope = 0.0;
+double avg_peak_inhale_slope = 2.0; // Initial default
+double avg_peak_exhale_slope = -2.0; // Initial default
 String serialCommand;
 bool apnea_alert_active = false;
 bool alerts_muted = false;

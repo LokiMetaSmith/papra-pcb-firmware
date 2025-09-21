@@ -48,8 +48,14 @@ extern double epap_pressure;
 extern double initial_pressure;
 extern double pressure_history[10];
 extern int pressure_history_index;
+extern double pressure_filter_buffer[5];
+extern int pressure_filter_index;
 extern unsigned long last_inhale_time;
 extern float respiratory_rate;
+extern double peak_inhale_slope;
+extern double peak_exhale_slope;
+extern double avg_peak_inhale_slope;
+extern double avg_peak_exhale_slope;
 #include "menu.h" // For MenuState enum
 
 extern String serialCommand;
