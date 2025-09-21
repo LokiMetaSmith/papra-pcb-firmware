@@ -133,9 +133,14 @@ double epap_pressure = 30.0; // Exhalation Positive Airway Pressure
 double initial_pressure = 0.0; // Store initial pressure to get gauge pressure
 double pressure_history[10]; // Short history of pressure readings
 int pressure_history_index = 0;
+unsigned long last_inhale_time = 0;
+float respiratory_rate = 0.0; // Breaths per minute
 
 // Serial Command Buffer
 String serialCommand;
+
+// Alert and Emergency Mode Flags
+bool apnea_alert_active = false;
 
 
 const int LEDFlashLoop  = 25; //decrease for 10% battery LED to blink faster
@@ -213,36 +218,52 @@ void setup() {
 void loop() {
   delay(25);
   checkSerialCommands();
+  checkAlerts();
 
   // --- Tachometer RPM Calculation ---
   fanRPM = calculateRPM();
 
-  // --- Bi-level Fan Control ---
+  // --- Main Control Logic ---
+  float pressure = getPressure(); // Read pressure once per loop
 
-  // 1. Get the current pressure
-  float pressure = getPressure();
+  if (apnea_alert_active) {
+    // --- EMERGENCY VENTILATION MODE ---
+    // WARNING: This is a simplistic, non-medical, experimental feature.
+    // It forces a timed breath cycle. Use with extreme caution.
+    unsigned long cycle_time = 4500; // 4.5 second total cycle (~13.3 BPM)
+    unsigned long inhale_time = 1500; // 1.5 second inhale
+    unsigned long time_in_cycle = millis() % cycle_time;
 
-  // 2. Update the breath model to determine the current phase of breathing
-  updateBreathModel(pressure);
+    if (time_in_cycle < inhale_time) {
+      // Force Inhale
+      pid_setpoint = ipap_pressure; // Use last known IPAP
+    } else {
+      // Force Exhale
+      pid_setpoint = 0; // Drop to zero pressure
+    }
+    fanPWM = computePID(pressure);
 
-  // 3. Set the IPAP and EPAP pressures. Potentiometer controls IPAP.
-  rawADC = analogRead(analogPot);
-  // Map pot from 0-1023 to a pressure range of 40.0 to 90.0 for IPAP
-  ipap_pressure = 40.0 + ( (double)rawADC / 1023.0 ) * (50.0);
-  epap_pressure = 40.0; // Fixed EPAP for now
-
-  // 4. Set the PID setpoint based on the breathing state
-  if (currentBreathState == STATE_INHALE) {
-    pid_setpoint = ipap_pressure;
   } else {
-    pid_setpoint = epap_pressure;
+    // --- BI-LEVEL PAP MODE ---
+    updateBreathModel(pressure);
+
+    // Set the IPAP and EPAP pressures. Potentiometer controls IPAP.
+    rawADC = analogRead(analogPot);
+    // Map pot from 0-1023 to a pressure range of 40.0 to 90.0 for IPAP
+    ipap_pressure = 40.0 + ((double)rawADC / 1023.0) * (50.0);
+    epap_pressure = 40.0; // Fixed EPAP for now
+
+    // Set the PID setpoint based on the breathing state
+    if (currentBreathState == STATE_INHALE) {
+      pid_setpoint = ipap_pressure;
+    } else {
+      pid_setpoint = epap_pressure;
+    }
+    fanPWM = computePID(pressure);
   }
 
-  // 5. Compute the new fan PWM using the PID controller
-  fanPWM = computePID(pressure);
-
-  // 6. Set the fan speed
-  TCB0.CCMPH = fanPWM; // Direct register write for TCB0 PWM
+  // Set the fan speed from either mode
+  TCB0.CCMPH = fanPWM;
   battery = battery = ( ( battery * ( numBatterySamples - 1 ) ) + analogRead(analogBatt) ) / numBatterySamples;
   switch (battery) {
     case battADC78p ... battADCMax: // Full = 78% - 100%
@@ -322,6 +343,7 @@ void loop() {
   Serial.print(" pressure = ");      Serial.print((int)pressure);
   Serial.print(" setpoint = ");      Serial.print((int)pid_setpoint);
   Serial.print(" state = ");         Serial.print(currentBreathState == STATE_INHALE ? "Inhale" : "Exhale");
+  Serial.print(" RR = ");            Serial.print(respiratory_rate);
   Serial.print(" pwm = ");           Serial.print(fanPWM);
   Serial.print(" rpm = ");           Serial.print(fanRPM);
   Serial.print(" Battery State = "); Serial.println(batteryState);
@@ -383,10 +405,13 @@ void tach_isr() {
  */
 void runCalibration() {
   Serial.println(F("Entering calibration mode..."));
-  Serial.println(F("PWM,RPM,Pressure"));
+  Serial.println(F("PWM,RPM,Pressure,Impedance"));
 
   // Turn off PID control during calibration
   // by setting fan speed directly.
+
+  float prev_pressure = 0;
+  int prev_pwm = 0;
 
   for (int pwm = minPWM10p; pwm <= 255; pwm += 10) {
     TCB0.CCMPH = pwm; // Direct register write for TCB0 PWM
@@ -395,15 +420,28 @@ void runCalibration() {
     uint32_t currentRPM = calculateRPM();
     float currentPressure = getPressure();
 
+    // Calculate impedance
+    float delta_pressure = currentPressure - prev_pressure;
+    int delta_pwm = pwm - prev_pwm;
+    float impedance = 0;
+    if (delta_pressure > 0) {
+      impedance = (float)delta_pwm / delta_pressure;
+    }
+
     Serial.print(pwm);
     Serial.print(F(","));
     Serial.print(currentRPM);
     Serial.print(F(","));
-    Serial.println(currentPressure);
+    Serial.print(currentPressure);
+    Serial.print(F(","));
+    Serial.println(impedance);
+
+    prev_pressure = currentPressure;
+    prev_pwm = pwm;
   }
 
   // Calibration finished, return to normal operation
-  analogWrite(PWMPin, 0); // Turn off fan before resuming PID
+  TCB0.CCMPH = 0; // Turn off fan before resuming PID
   Serial.println(F("Calibration finished."));
 }
 
@@ -436,6 +474,20 @@ void updateBreathModel(double current_pressure) {
     // If we are exhaling, look for a positive slope to switch to inhale
     if (slope > inhale_trigger_slope) {
       currentBreathState = STATE_INHALE;
+      unsigned long now = millis();
+      if (last_inhale_time > 0) {
+        // Calculate breath-to-breath interval in seconds
+        double interval_s = (double)(now - last_inhale_time) / 1000.0;
+        // Convert to breaths per minute
+        respiratory_rate = 60.0 / interval_s;
+      }
+      last_inhale_time = now;
+
+      // If we are recovering from an apnea event, reset the flag.
+      if (apnea_alert_active) {
+        Serial.println(F("Normal breathing resumed. Exiting emergency mode."));
+        apnea_alert_active = false;
+      }
     }
   }
 }
@@ -451,6 +503,28 @@ void checkSerialCommands() {
       serialCommand = "";
     } else {
       serialCommand += c;
+    }
+  }
+}
+
+// Placeholder for the alert system
+void checkAlerts() {
+  // Apnea Detection
+  // Only check if we have had at least one breath
+  if (last_inhale_time > 0 && (millis() - last_inhale_time > 20000)) { // 20-second threshold
+    if (!apnea_alert_active) {
+      Serial.println(F("ALERT: Apnea detected! Entering emergency ventilation mode."));
+      apnea_alert_active = true;
+    }
+  }
+
+  // Respiratory Rate Check
+  // Check only if we have a valid rate
+  if (respiratory_rate > 0) {
+    if (respiratory_rate < 8) {
+      Serial.println(F("ALERT: Respiratory rate is too low!"));
+    } else if (respiratory_rate > 35) {
+      Serial.println(F("ALERT: Respiratory rate is too high!"));
     }
   }
 }
