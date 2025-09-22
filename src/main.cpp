@@ -120,7 +120,22 @@ void loop() {
   delay(25); // Main loop delay
 
   checkSerialCommands();
-  checkUserInput();
+
+  MenuEvent event = checkUserInput();
+
+  if (current_menu_state == STATE_HOME_SCREEN) {
+    if (event == EVENT_NAV_UP) {
+      ipap_pressure += 0.5; // Increase pressure by 0.5
+    } else if (event == EVENT_NAV_DOWN) {
+      ipap_pressure -= 0.5; // Decrease pressure by 0.5
+    } else if (event == EVENT_NAV_SELECT) {
+      processMenuEvent(event); // Enter menu
+    }
+  } else {
+    // We are in the menu, so pass all events to the menu handler
+    processMenuEvent(event);
+  }
+
   checkAlerts();
 
   // If an alert is active, override normal LED display with a visual alert

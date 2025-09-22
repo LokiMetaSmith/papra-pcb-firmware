@@ -3,6 +3,6 @@
 
 #include "globals.h"
 
-void checkUserInput();
+MenuEvent checkUserInput();
 
 #endif // INPUT_H
