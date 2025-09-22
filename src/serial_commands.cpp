@@ -4,6 +4,64 @@
 #include "tachometer.h" // For calculateRPM()
 #include "main.h" // For getPressure()
 #include "eeprom_config.h" // For saveConfig()
+#include <PID_AutoTune.h>
+
+// --- Autotune Variables ---
+byte ATuneMode = 2; // 2 = Ziegler-Nichols PI, 3 = Ziegler-Nichols PID
+unsigned int ATuneSampleTime = 50; // How often to run the autotuner
+double ATuneStartValue = 128; // Initial PWM output
+double ATuneStep = 50; // PWM step size for the tuning cycle
+double ATuneNoise = 1.0; // Noise band
+unsigned int ATuneLookback = 60; // Lookback time in seconds
+
+PID_AutoTune tuner = PID_AutoTune();
+
+void runAutotune() {
+  Serial.println(F("Starting PID Autotune..."));
+  Serial.println(F("This will take a few minutes. The fan will oscillate."));
+
+  // Set up the tuner
+  tuner.SetControlType(ATuneMode);
+  tuner.SetNoiseBand(ATuneNoise);
+  tuner.SetOutputStep(ATuneStep);
+  tuner.SetLookbackSec((int)ATuneLookback);
+
+  unsigned long last_autotune_run = millis();
+  double autotune_output = ATuneStartValue;
+
+  // The autotune loop
+  while (tuner.running()) {
+    if (millis() - last_autotune_run >= ATuneSampleTime) {
+      last_autotune_run = millis();
+
+      double input = getPressure();
+      int val = tuner.Runtime(input);
+
+      if (val != 0) {
+        // Tuning is finished
+        break;
+      }
+
+      autotune_output = tuner.GetOutput();
+      analogWrite(PWMPin, autotune_output);
+    }
+  }
+
+  // Get the results
+  Kp = tuner.GetKp();
+  Ki = tuner.GetKi();
+  Kd = tuner.GetKd();
+
+  Serial.println(F("PID Autotune finished."));
+  Serial.print(F("New Kp: ")); Serial.println(Kp);
+  Serial.print(F("New Ki: ")); Serial.println(Ki);
+  Serial.print(F("New Kd: ")); Serial.println(Kd);
+  Serial.println(F("Saving new values to EEPROM..."));
+  saveConfig();
+
+  // Turn fan off
+  analogWrite(PWMPin, 0);
+}
 
 void runCalibration() {
   Serial.println(F("Entering calibration mode..."));
@@ -57,6 +115,10 @@ void checkSerialCommands() {
       // Handle 'calibrate' command
       if (serialCommand.equalsIgnoreCase("calibrate")) {
         runCalibration();
+      }
+      // Handle 'autotune' command
+      else if (serialCommand.equalsIgnoreCase("autotune")) {
+        runAutotune();
       }
       // Handle 'save' command
       else if (serialCommand.equalsIgnoreCase("save")) {
