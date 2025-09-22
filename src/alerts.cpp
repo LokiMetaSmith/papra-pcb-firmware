@@ -51,5 +51,16 @@ void checkAlerts() {
     }
   }
 
+  // PWM Headroom / Filter Clog Check
+  const float pwm_headroom_threshold = 0.80; // 80%
+  // Only check if the fan is running at a reasonable speed
+  if (fanPWM > minPWM10p) {
+    float pwm_usage = (float)fanPWM / (float)maxPWM;
+    if (pwm_usage > pwm_headroom_threshold) {
+      Serial.println(F("ALERT: Filter may be clogged! Fan at >80% capacity."));
+      condition_found = true;
+    }
+  }
+
   alert_active = condition_found;
 }

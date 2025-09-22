@@ -13,6 +13,7 @@ void loadConfig() {
     Kp = cfg.Kp;
     Ki = cfg.Ki;
     Kd = cfg.Kd;
+    baseline_filter_impedance = cfg.baseline_filter_impedance;
   } else {
     // EEPROM is not initialized or data is corrupt
     // Load default values and save them
@@ -29,6 +30,7 @@ void saveConfig() {
   cfg.Kp = Kp;
   cfg.Ki = Ki;
   cfg.Kd = Kd;
+  cfg.baseline_filter_impedance = baseline_filter_impedance;
 
   EEPROM.put(0, cfg);
   Serial.println(F("Configuration saved to EEPROM."));

@@ -45,6 +45,7 @@ int pressure_filter_index = 0;
 unsigned long last_inhale_time = 0;
 float respiratory_rate = 0.0;
 float baseline_respiratory_rate = 0.0;
+float baseline_filter_impedance = 0.0;
 double rr_accumulator = 0.0;
 int rr_sample_count = 0;
 double peak_inhale_slope = 0.0;

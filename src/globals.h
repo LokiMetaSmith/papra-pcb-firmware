@@ -21,6 +21,7 @@ struct Config {
   double Kp;
   double Ki;
   double Kd;
+  float baseline_filter_impedance;
 };
 
 #include <Adafruit_SSD1306.h>
@@ -53,6 +54,7 @@ extern int pressure_filter_index;
 extern unsigned long last_inhale_time;
 extern float respiratory_rate;
 extern float baseline_respiratory_rate;
+extern float baseline_filter_impedance;
 extern double rr_accumulator;
 extern int rr_sample_count;
 extern double peak_inhale_slope;
