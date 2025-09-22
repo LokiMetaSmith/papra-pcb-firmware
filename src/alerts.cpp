@@ -1,7 +1,3 @@
-// Implementation of alert system functions
-#include "globals.h"
-#include "alerts.h"
-
 #include "alerts.h"
 #include "globals.h"
 
@@ -34,7 +30,7 @@ void triggerAudibleAlert() {
 void checkAlerts() {
   bool condition_found = false;
 
-  // Apnea Detection
+  // Apnea Detection (always active)
   if (last_inhale_time > 0 && (millis() - last_inhale_time > 20000)) { // 20-second threshold
     if (!apnea_alert_active) {
       Serial.println(F("ALERT: Apnea detected! Entering emergency ventilation mode."));
@@ -43,9 +39,13 @@ void checkAlerts() {
     condition_found = true;
   }
 
-  // Respiratory Rate Check
-  if (respiratory_rate > 0) {
-    if (respiratory_rate < 8 || respiratory_rate > 35) {
+  // Respiratory Rate Check (only active after learning phase)
+  if (!is_in_learning_phase && baseline_respiratory_rate > 0) {
+    // Set dynamic thresholds based on the baseline
+    float low_rr_threshold = baseline_respiratory_rate * 0.5;
+    float high_rr_threshold = baseline_respiratory_rate * 1.8;
+
+    if (respiratory_rate < low_rr_threshold || respiratory_rate > high_rr_threshold) {
       Serial.println(F("ALERT: Abnormal respiratory rate!"));
       condition_found = true;
     }

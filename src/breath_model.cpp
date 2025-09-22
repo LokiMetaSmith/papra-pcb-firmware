@@ -18,10 +18,19 @@ void updateBreathModel(double raw_pressure) {
   pressure_history_index = (pressure_history_index + 1) % 10;
 
   // --- 3. Update state machine and track peaks ---
-  // Define adaptive slope thresholds for switching states.
-  const float trigger_sensitivity = 0.5; // 50% of the average peak
-  double inhale_trigger_slope = avg_peak_inhale_slope * trigger_sensitivity;
-  double exhale_trigger_slope = avg_peak_exhale_slope * trigger_sensitivity;
+  double inhale_trigger_slope;
+  double exhale_trigger_slope;
+
+  if (is_in_learning_phase) {
+    // During the learning phase, use fixed, gentle thresholds
+    inhale_trigger_slope = 2.0;
+    exhale_trigger_slope = -2.0;
+  } else {
+    // After learning, use adaptive thresholds based on user's effort
+    const float trigger_sensitivity = 0.5; // 50% of the average peak
+    inhale_trigger_slope = avg_peak_inhale_slope * trigger_sensitivity;
+    exhale_trigger_slope = avg_peak_exhale_slope * trigger_sensitivity;
+  }
 
   if (currentBreathState == STATE_INHALE) {
     // Track the peak inhalation slope for this breath
@@ -32,7 +41,6 @@ void updateBreathModel(double raw_pressure) {
     // If we are inhaling, look for a negative slope to switch to exhale
     if (slope < exhale_trigger_slope) {
       currentBreathState = STATE_EXHALE;
-      // When we switch to exhale, reset the peak exhale slope for the new phase
       peak_exhale_slope = 0;
     }
   } else { // STATE_EXHALE
@@ -47,15 +55,12 @@ void updateBreathModel(double raw_pressure) {
       currentBreathState = STATE_INHALE;
 
       // Update the running average of the peak slopes
-      // Using a simple moving average with a factor of 0.2 (i.e., last 5 breaths)
-      if (peak_inhale_slope > 0) { // Only update if we had a valid peak
+      if (peak_inhale_slope > 0) {
         avg_peak_inhale_slope = (0.8 * avg_peak_inhale_slope) + (0.2 * peak_inhale_slope);
       }
-      if (peak_exhale_slope < 0) { // Only update if we had a valid peak
+      if (peak_exhale_slope < 0) {
         avg_peak_exhale_slope = (0.8 * avg_peak_exhale_slope) + (0.2 * peak_exhale_slope);
       }
-
-      // Reset the peak inhale slope for the new phase
       peak_inhale_slope = 0;
 
       // --- Calculate Respiratory Rate ---
@@ -63,6 +68,10 @@ void updateBreathModel(double raw_pressure) {
       if (last_inhale_time > 0) {
         double interval_s = (double)(now - last_inhale_time) / 1000.0;
         respiratory_rate = 60.0 / interval_s;
+        if (is_in_learning_phase) {
+          rr_accumulator += respiratory_rate;
+          rr_sample_count++;
+        }
       }
       last_inhale_time = now;
 

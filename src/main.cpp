@@ -44,6 +44,9 @@ double pressure_filter_buffer[5];
 int pressure_filter_index = 0;
 unsigned long last_inhale_time = 0;
 float respiratory_rate = 0.0;
+float baseline_respiratory_rate = 0.0;
+double rr_accumulator = 0.0;
+int rr_sample_count = 0;
 double peak_inhale_slope = 0.0;
 double peak_exhale_slope = 0.0;
 double avg_peak_inhale_slope = 2.0; // Initial default
@@ -53,6 +56,7 @@ bool apnea_alert_active = false;
 bool alerts_muted = false;
 bool alert_active = false;
 MenuState current_menu_state;
+bool is_in_learning_phase = true;
 // --- End of Global Variable Definitions ---
 
 
@@ -117,6 +121,21 @@ void setup() {
 
 // the loop routine runs over and over again forever:
 void loop() {
+  // --- Learning Phase Check ---
+  if (is_in_learning_phase && (millis() > learning_phase_duration)) {
+    is_in_learning_phase = false;
+
+    // Calculate the baseline respiratory rate
+    if (rr_sample_count > 0) {
+      baseline_respiratory_rate = rr_accumulator / rr_sample_count;
+    } else {
+      baseline_respiratory_rate = 16.0; // Default to 16 BPM if no breaths were detected
+    }
+
+    Serial.println(F("Learning phase complete. Adaptive thresholds are now active."));
+    Serial.print(F("Baseline Respiratory Rate set to: ")); Serial.println(baseline_respiratory_rate);
+  }
+
   delay(25); // Main loop delay
 
   checkSerialCommands();

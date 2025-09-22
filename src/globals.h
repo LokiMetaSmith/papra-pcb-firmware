@@ -52,6 +52,9 @@ extern double pressure_filter_buffer[5];
 extern int pressure_filter_index;
 extern unsigned long last_inhale_time;
 extern float respiratory_rate;
+extern float baseline_respiratory_rate;
+extern double rr_accumulator;
+extern int rr_sample_count;
 extern double peak_inhale_slope;
 extern double peak_exhale_slope;
 extern double avg_peak_inhale_slope;
@@ -63,6 +66,10 @@ extern bool apnea_alert_active;
 extern bool alerts_muted;
 extern bool alert_active;
 extern MenuState current_menu_state;
+extern bool is_in_learning_phase;
+
+// Constants
+const unsigned long learning_phase_duration = 60000; // 60 seconds
 
 // Pin definitions for ATtiny3226 (20-pin)
 const int led1        = PIN_PC0;
