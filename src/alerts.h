@@ -2,9 +2,11 @@
 #ifndef ALERTS_H
 #define ALERTS_H
 
-#include <Arduino.h>
+#include "globals.h"
 
-// Function prototype
+// Function prototypes
 void checkAlerts();
+void triggerVisualAlert();
+void triggerAudibleAlert();
 
 #endif // ALERTS_H

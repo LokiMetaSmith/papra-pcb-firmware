@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "author": "Jules for PAPRA Project",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-attiny817",
+      "id": "mcu",
+      "top": -13.6,
+      "left": -12,
+      "attrs": {
+        "variant": "SOIC20"
+      },
+      "comment": "Using ATtiny817 as a stand-in for ATtiny3226"
+    },
+    {
+      "type": "wokwi-ssd1306",
+      "id": "oled1",
+      "top": -150,
+      "left": 150,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-bme280",
+      "id": "bme1",
+      "top": -80,
+      "left": 170,
+      "attrs": {}
+    },
+    { "type": "wokwi-led", "id": "led1", "top": 100, "left": -100, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "led2", "top": 100, "left": -80, "attrs": { "color": "yellow" } },
+    { "type": "wokwi-led", "id": "led3", "top": 100, "left": -60, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "led4", "top": 100, "left": -40, "attrs": { "color": "blue" } },
+    { "type": "wokwi-buzzer", "id": "bz1", "top": 100, "left": 0, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": 100, "left": 50, "attrs": {} },
+    {
+      "type": "wokwi-rotary-encoder",
+      "id": "encoder1",
+      "top": 90,
+      "left": 150,
+      "attrs": {}
+    },
+    { "type": "wokwi-resistor", "id": "r1", "top": 140, "left": -100, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r2", "top": 140, "left": -80, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r3", "top": 140, "left": -60, "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "r4", "top": 140, "left": -40, "attrs": { "value": "220" } },
+    {
+      "type": "wokwi-clock",
+      "id": "tach_sim",
+      "top": 50,
+      "left": -150,
+      "attrs": { "frequency": "100" }
+    },
+    { "type": "wokwi-led", "id": "fan_pwm_led", "top": 0, "left": -150, "attrs": { "color": "white", "label": "Fan PWM" } },
+    { "type": "wokwi-resistor", "id": "r5", "top": 40, "left": -150, "attrs": { "value": "220" } }
+  ],
+  "connections": [
+    [ "mcu:VCC", "oled1:VCC", "bme1:VCC", "pot1:VCC", "encoder1:B", { "color": "red" } ],
+    [ "mcu:GND", "oled1:GND", "bme1:GND", "pot1:GND", "bz1:N", "encoder1:C", "r1:2", "r2:2", "r3:2", "r4:2", "fan_pwm_led:C", { "color": "black" } ],
+
+    [ "mcu:PA1", "oled1:SDA", "bme1:SDA", { "color": "blue" } ],
+    [ "mcu:PA2", "oled1:SCL", "bme1:SCL", { "color": "green" } ],
+
+    [ "mcu:PC0", "led1:A", { "color": "red" } ],
+    [ "led1:C", "r1:1", { "color": "red" } ],
+    [ "mcu:PC1", "led2:A", { "color": "yellow" } ],
+    [ "led2:C", "r2:1", { "color": "yellow" } ],
+    [ "mcu:PC2", "led3:A", { "color": "green" } ],
+    [ "led3:C", "r3:1", { "color": "green" } ],
+    [ "mcu:PC3", "led4:A", { "color": "blue" } ],
+    [ "led4:C", "r4:1", { "color": "blue" } ],
+
+    [ "mcu:PB1", "bz1:P", { "color": "orange" } ],
+    [ "mcu:PD0", "pot1:SIG", { "color": "purple" } ],
+
+    [ "mcu:PD2", "encoder1:A", { "color": "cyan" } ],
+    [ "mcu:PD3", "encoder1:B", { "color": "cyan" } ],
+    [ "mcu:PD4", "encoder1:SW", { "color": "blue" } ],
+
+    [ "mcu:PA3", "tach_sim:OUT", { "color": "magenta", "label": "Tach" } ],
+    [ "mcu:PB0", "fan_pwm_led:A", { "color": "white", "label": "PWM" } ],
+    [ "fan_pwm_led:C", "r5:1", { "color": "white" } ]
+  ]
+}

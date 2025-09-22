@@ -5,12 +5,29 @@
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
+#include <EEPROM.h>
 
 // BME280 I2C address is 0x76 or 0x77. Using 0x76 as an example.
 #define BME280_I2C_ADDRESS 0x76
 
+// OLED Display settings
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define OLED_RESET    -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
+// Struct for storing configuration in EEPROM
+struct Config {
+  uint32_t magic_number; // To check if EEPROM is initialized
+  double Kp;
+  double Ki;
+  double Kd;
+};
+
+#include <Adafruit_SSD1306.h>
+
 // Extern declarations for global variables defined in papracode.ino
 extern Adafruit_BME280 bme;
+extern Adafruit_SSD1306 display;
 extern int batteryState;
 extern int loopDelay;
 extern uint32_t fanPWM;
@@ -31,19 +48,37 @@ extern double epap_pressure;
 extern double initial_pressure;
 extern double pressure_history[10];
 extern int pressure_history_index;
+extern double pressure_filter_buffer[5];
+extern int pressure_filter_index;
 extern unsigned long last_inhale_time;
 extern float respiratory_rate;
+extern double peak_inhale_slope;
+extern double peak_exhale_slope;
+extern double avg_peak_inhale_slope;
+extern double avg_peak_exhale_slope;
+#include "menu.h" // For MenuState enum
+
 extern String serialCommand;
 extern bool apnea_alert_active;
+extern bool alerts_muted;
+extern bool alert_active;
+extern MenuState current_menu_state;
 
-// Pin definitions (can be defined in header as they are const)
-const int analogBatt  = PIN_A1;
-const int analogPot   = PIN_A2;
+// Pin definitions for ATtiny3226 (20-pin)
+const int led1        = PIN_PC0;
+const int led2        = PIN_PC1;
+const int led3        = PIN_PC2;
+const int led4        = PIN_PC3;
+const int PWMPin      = PIN_PB0; // TCA0 PWM output
+const int buzzerPin   = PIN_PB1;
 const int tachPin     = PIN_PA3;
-const int led4        = PIN_PA4;
-const int led2        = PIN_PA6;
-const int led3        = PIN_PA7;
-const int PWMPin      = PIN_PA5;
+const int analogPot   = PIN_PD0;
+const int analogBatt  = PIN_PD1;
+const int rotary_A_pin = PIN_PD2;
+const int rotary_B_pin = PIN_PD3;
+const int rotary_SW_pin = PIN_PD4;
+// I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
+// UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
 
 // Constants (can be defined in header)
 const int battADCMax  =  1023;

@@ -1,0 +1,78 @@
+# Wireviz diagram definition for the PAPR project
+
+# Define the main physical components of the project.
+# Each component is a "connector" in wireviz terms.
+connectors:
+  MCU:
+    type: ATtiny3226-SOIC20
+    pins: [VCC, GND, PA0, PA1, PA2, PA3, PB0, PB1, PB2, PB3, PC0, PC1, PC2, PC3, PD0, PD1, PD2]
+    pincount: 18 # Simplified for clarity
+
+  BME280:
+    type: BME280 Module
+    pins: [VCC, GND, SCL, SDA]
+
+  Fan:
+    type: 4-Pin PWM Fan
+    pins: [VCC, GND, PWM, TACH]
+
+  Potentiometer:
+    type: 10k Potentiometer
+    pins: [VCC, GND, SIG]
+
+  LED_Array:
+    type: 4x LEDs
+    pins: [LED1, LED2, LED3, LED4, GND]
+
+  Buzzer:
+    type: Piezo Buzzer
+    pins: [IN, GND]
+
+  Rotary_Encoder:
+    type: Rotary Encoder + Switch
+    pins: [CLK, DT, SW, VCC, GND]
+
+  Power_In:
+    type: Power Jack
+    pins: [V_BATT, GND]
+
+  Programmer:
+    type: Serial-UPDI Adapter
+    pins: [UPDI, TX, RX, GND]
+
+# Define the connections between the components.
+connections:
+  # Power Connections
+  - ["Power_In:V_BATT", "MCU:VCC", "BME280:VCC", "Fan:VCC", "Potentiometer:VCC", "Rotary_Encoder:VCC"]
+  - ["Power_In:GND", "MCU:GND", "BME280:GND", "Fan:GND", "Potentiometer:GND", "LED_Array:GND", "Buzzer:GND", "Rotary_Encoder:GND", "Programmer:GND"]
+
+  # I2C Bus
+  - ["MCU:PA1", "BME280:SDA"]
+  - ["MCU:PA2", "BME280:SCL"]
+
+  # Fan Control
+  - ["MCU:PB0", "Fan:PWM"]
+  - ["MCU:PA3", "Fan:TACH"]
+
+  # LEDs
+  - ["MCU:PC0", "LED_Array:LED1"]
+  - ["MCU:PC1", "LED_Array:LED2"]
+  - ["MCU:PC2", "LED_Array:LED3"]
+  - ["MCU:PC3", "LED_Array:LED4"]
+
+  # Buzzer
+  - ["MCU:PB1", "Buzzer:IN"]
+
+  # Analog Inputs
+  - ["MCU:PD0", "Potentiometer:SIG"]
+  - ["MCU:PD1", "Power_In:V_BATT", {label: "V_SENSE (via divider)"}]
+
+  # Digital Inputs (Rotary Encoder)
+  - ["MCU:PD2", "Rotary_Encoder:CLK"]
+  - ["MCU:PD3", "Rotary_Encoder:DT"]
+  - ["MCU:PD4", "Rotary_Encoder:SW"]
+
+  # Programming and Debug
+  - ["MCU:PA0", "Programmer:UPDI"]
+  - ["MCU:PB2", "Programmer:TX"]
+  - ["MCU:PB3", "Programmer:RX"]
