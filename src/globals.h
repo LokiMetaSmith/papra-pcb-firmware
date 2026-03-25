@@ -81,9 +81,16 @@ const int analogBatt  = PIN_PD3;
 const int rotary_A_pin = PIN_PD4;
 const int rotary_B_pin = PIN_PD5;
 const int rotary_SW_pin = PIN_PD6;
-const int muteButtonPin = PIN_PA4;
+const int muteButtonPin = PIN_PD7;
 // I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
 // UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
+// SPI pins are PA4 (MOSI), PA5 (MISO), PA6 (SCK) - handled by SPI library
+
+// LoRaWAN pins
+const int lora_NSS_pin = PIN_PA7;
+const int lora_RST_pin = PIN_PF0;
+const int lora_DIO0_pin = PIN_PF1;
+const int lora_DIO1_pin = PIN_PC4; // PF2 does not exist on 28-pin. Using PC4.
 
 // Constants (can be defined in header)
 const int battADCMax  =  1023;

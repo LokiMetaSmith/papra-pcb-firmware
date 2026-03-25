@@ -16,6 +16,7 @@
 #include "user_input.h"
 #include "display.h"
 #include "menu.h"
+#include "lorawan.h"
 
 // --- Global Variable Definitions ---
 // These are declared as 'extern' in globals.h
@@ -109,6 +110,9 @@ void setup() {
   for(int i=0; i<10; i++) {
     pressure_history[i] = 0;
   }
+
+  // Setup LoRaWAN
+  setupLoRaWAN();
 }
 
 // the loop routine runs over and over again forever:
@@ -169,6 +173,9 @@ void loop() {
 
   // Update the OLED display
   updateDisplay();
+
+  // Process LoRaWAN tasks
+  loopLoRaWAN();
 
   // --- Serial Debug Output ---
   Serial.print(" pressure = ");      Serial.print((int)pressure);
