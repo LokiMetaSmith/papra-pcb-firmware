@@ -21,6 +21,7 @@ struct Config {
   double Kp;
   double Ki;
   double Kd;
+  double baseline_impedance;
 };
 
 #include <Adafruit_SSD1306.h>
@@ -56,6 +57,7 @@ extern double peak_inhale_slope;
 extern double peak_exhale_slope;
 extern double avg_peak_inhale_slope;
 extern double avg_peak_exhale_slope;
+extern double baseline_impedance;
 #include "menu.h" // For MenuState enum
 
 extern String serialCommand;
