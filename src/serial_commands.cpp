@@ -105,6 +105,51 @@ void runCalibration() {
   Serial.println(F("Calibration finished."));
 }
 
+void runNewFilterCalibration() {
+  Serial.println(F("Entering new filter calibration mode..."));
+
+  // Turn off PID control during calibration
+  // by setting fan speed directly.
+
+  float prev_pressure = 0;
+  int prev_pwm = 0;
+
+  double total_impedance = 0;
+  int num_samples = 0;
+
+  for (int pwm = minPWM10p; pwm <= 255; pwm += 10) {
+    analogWrite(PWMPin, pwm);
+    delay(2000); // Wait 2 seconds for system to stabilize
+
+    float currentPressure = getPressure();
+
+    // Calculate impedance
+    float delta_pressure = currentPressure - prev_pressure;
+    int delta_pwm = pwm - prev_pwm;
+    float impedance = 0;
+    if (delta_pressure > 0) {
+      impedance = (float)delta_pwm / delta_pressure;
+      total_impedance += impedance;
+      num_samples++;
+    }
+
+    prev_pressure = currentPressure;
+    prev_pwm = pwm;
+  }
+
+  if (num_samples > 0) {
+    baseline_impedance = total_impedance / num_samples;
+    Serial.print(F("Calibration finished. New baseline impedance: "));
+    Serial.println(baseline_impedance);
+    saveConfig();
+  } else {
+    Serial.println(F("Calibration failed to calculate impedance."));
+  }
+
+  // Calibration finished, return to normal operation
+  analogWrite(PWMPin, 0); // Turn off fan before resuming PID
+}
+
 void checkSerialCommands() {
   while (Serial.available() > 0) {
     char c = (char)Serial.read();
@@ -119,6 +164,10 @@ void checkSerialCommands() {
       // Handle 'autotune' command
       else if (serialCommand.equalsIgnoreCase("autotune")) {
         runAutotune();
+      }
+      // Handle 'newfilter' command
+      else if (serialCommand.equalsIgnoreCase("newfilter")) {
+        runNewFilterCalibration();
       }
       // Handle 'save' command
       else if (serialCommand.equalsIgnoreCase("save")) {

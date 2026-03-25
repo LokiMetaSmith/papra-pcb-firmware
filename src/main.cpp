@@ -48,6 +48,7 @@ double peak_inhale_slope = 0.0;
 double peak_exhale_slope = 0.0;
 double avg_peak_inhale_slope = 2.0; // Initial default
 double avg_peak_exhale_slope = -2.0; // Initial default
+double baseline_impedance = 0.0;
 String serialCommand;
 bool apnea_alert_active = false;
 bool alerts_muted = false;
