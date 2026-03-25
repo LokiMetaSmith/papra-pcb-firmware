@@ -4,7 +4,7 @@
 #include "tachometer.h" // For calculateRPM()
 #include "main.h" // For getPressure()
 #include "eeprom_config.h" // For saveConfig()
-#include <PID_AutoTune.h>
+#include <PID_AutoTune_v0.h>
 
 // --- Autotune Variables ---
 byte ATuneMode = 2; // 2 = Ziegler-Nichols PI, 3 = Ziegler-Nichols PID
@@ -14,7 +14,8 @@ double ATuneStep = 50; // PWM step size for the tuning cycle
 double ATuneNoise = 1.0; // Noise band
 unsigned int ATuneLookback = 60; // Lookback time in seconds
 
-PID_AutoTune tuner = PID_AutoTune();
+double input_atune, output_atune;
+PID_ATune tuner(&input_atune, &output_atune);
 
 void runAutotune() {
   Serial.println(F("Starting PID Autotune..."));
@@ -30,20 +31,19 @@ void runAutotune() {
   double autotune_output = ATuneStartValue;
 
   // The autotune loop
-  while (tuner.running()) {
+  while (true) {
     if (millis() - last_autotune_run >= ATuneSampleTime) {
       last_autotune_run = millis();
 
-      double input = getPressure();
-      int val = tuner.Runtime(input);
+      input_atune = getPressure();
+      int val = tuner.Runtime();
 
       if (val != 0) {
         // Tuning is finished
         break;
       }
 
-      autotune_output = tuner.GetOutput();
-      analogWrite(PWMPin, autotune_output);
+      analogWrite(PWMPin, output_atune);
     }
   }
 
@@ -174,7 +174,7 @@ void checkSerialCommands() {
         saveConfig();
       }
       // Handle 'set' commands (e.g., "set kp 2.5")
-      else if (serialCommand.toLowerCase().startsWith("set ")) {
+      else if (serialCommand.startsWith("set ") || serialCommand.startsWith("SET ")) {
         // Find the space after "set"
         int firstSpace = serialCommand.indexOf(' ');
         // Find the space between the variable and the value

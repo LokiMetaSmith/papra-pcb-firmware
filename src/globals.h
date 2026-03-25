@@ -58,6 +58,8 @@ extern double peak_exhale_slope;
 extern double avg_peak_inhale_slope;
 extern double avg_peak_exhale_slope;
 extern double baseline_impedance;
+extern double pressure_compensation;
+
 #include "menu.h" // For MenuState enum
 
 extern String serialCommand;
@@ -66,19 +68,20 @@ extern bool alerts_muted;
 extern bool alert_active;
 extern MenuState current_menu_state;
 
-// Pin definitions for ATtiny3226 (20-pin)
+// Pin definitions for AVR128DA28 (28-pin)
 const int led1        = PIN_PC0;
 const int led2        = PIN_PC1;
 const int led3        = PIN_PC2;
 const int led4        = PIN_PC3;
-const int PWMPin      = PIN_PB0; // TCA0 PWM output
-const int buzzerPin   = PIN_PB1;
+const int PWMPin      = PIN_PD0; // TCA0 PWM output, mapping PB0 to PD0 for DA28
+const int buzzerPin   = PIN_PD1; // Mapping PB1 to PD1
 const int tachPin     = PIN_PA3;
-const int analogPot   = PIN_PD0;
-const int analogBatt  = PIN_PD1;
-const int rotary_A_pin = PIN_PD2;
-const int rotary_B_pin = PIN_PD3;
-const int rotary_SW_pin = PIN_PD4;
+const int analogPot   = PIN_PD2;
+const int analogBatt  = PIN_PD3;
+const int rotary_A_pin = PIN_PD4;
+const int rotary_B_pin = PIN_PD5;
+const int rotary_SW_pin = PIN_PD6;
+const int muteButtonPin = PIN_PA4;
 // I2C pins are PA1 (SDA) and PA2 (SCL) - handled by Wire library
 // UART pins are PB2 (TX) and PB3 (RX) - handled by Serial library
 

@@ -49,11 +49,11 @@ double peak_exhale_slope = 0.0;
 double avg_peak_inhale_slope = 2.0; // Initial default
 double avg_peak_exhale_slope = -2.0; // Initial default
 double baseline_impedance = 0.0;
+double pressure_compensation = 0.0;
 String serialCommand;
 bool apnea_alert_active = false;
 bool alerts_muted = false;
 bool alert_active = false;
-MenuState current_menu_state;
 // --- End of Global Variable Definitions ---
 
 
@@ -68,11 +68,6 @@ void setup() {
   pinMode(buzzerPin, OUTPUT);
   pinMode(PWMPin, OUTPUT);
   pinMode(muteButtonPin, INPUT_PULLUP);
-
-  // Configure TCA0 for standard PWM on PWMPin (PB0)
-  TCA0.SINGLE.CTRLB = TCA_SINGLE_WGMODE_SINGLESLOPE_gc; // Single slope PWM
-  TCA0.SINGLE.PER = 0xFF; // 8-bit resolution
-  TCA0.SINGLE.CTRLA = TCA_SINGLE_CLKSEL_DIV4_gc | TCA_SINGLE_ENABLE_bm; // Enable with prescaler
 
   // Initialize I2C on default pins (PA1, PA2)
   Wire.begin();
@@ -162,9 +157,9 @@ void loop() {
     epap_pressure = 40.0; // Fixed EPAP for now
 
     if (currentBreathState == STATE_INHALE) {
-      pid_setpoint = ipap_pressure;
+      pid_setpoint = ipap_pressure + pressure_compensation;
     } else {
-      pid_setpoint = epap_pressure;
+      pid_setpoint = epap_pressure + pressure_compensation;
     }
     fanPWM = computePID(pressure);
   }

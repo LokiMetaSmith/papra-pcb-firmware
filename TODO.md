@@ -36,5 +36,5 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
     - [ ] Rework breath trigger to "ramp" based on initial user breathing.
 - [x] **Filter Lifecycle Management:**
     - [x] Add a `newfilter` command to run calibration and save the baseline impedance to EEPROM.
-- [ ] **UI Enhancements:**
-    - [ ] Use the rotary encoder on the home screen to adjust a real-time compensation value.
+- [x] **UI Enhancements:**
+    - [x] Use the rotary encoder on the home screen to adjust a real-time compensation value.
