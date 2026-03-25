@@ -36,15 +36,23 @@ connectors:
     type: Power Jack
     pins: [V_BATT, GND]
 
+  Mute_Button:
+    type: Push Button
+    pins: [SIG, GND]
+
   Programmer:
     type: Serial-UPDI Adapter
     pins: [UPDI, TX, RX, GND]
 
+  LoRa_Module:
+    type: RFM95W
+    pins: [VCC, GND, SCK, MISO, MOSI, NSS, DIO0, DIO1, RST]
+
 # Define the connections between the components.
 connections:
   # Power Connections
-  - ["Power_In:V_BATT", "MCU:VCC", "BME280:VCC", "Fan:VCC", "Potentiometer:VCC", "Rotary_Encoder:VCC"]
-  - ["Power_In:GND", "MCU:GND", "BME280:GND", "Fan:GND", "Potentiometer:GND", "LED_Array:GND", "Buzzer:GND", "Rotary_Encoder:GND", "Programmer:GND"]
+  - ["Power_In:V_BATT", "MCU:VCC", "BME280:VCC", "Fan:VCC", "Potentiometer:VCC", "Rotary_Encoder:VCC", "LoRa_Module:VCC"]
+  - ["Power_In:GND", "MCU:GND", "BME280:GND", "Fan:GND", "Potentiometer:GND", "LED_Array:GND", "Buzzer:GND", "Rotary_Encoder:GND", "Programmer:GND", "LoRa_Module:GND", "Mute_Button:GND"]
 
   # I2C Bus
   - ["MCU:PA1", "BME280:SDA"]
@@ -67,12 +75,22 @@ connections:
   - ["MCU:PD0", "Potentiometer:SIG"]
   - ["MCU:PD1", "Power_In:V_BATT", {label: "V_SENSE (via divider)"}]
 
-  # Digital Inputs (Rotary Encoder)
+  # Digital Inputs (Rotary Encoder & Button)
   - ["MCU:PD2", "Rotary_Encoder:CLK"]
   - ["MCU:PD3", "Rotary_Encoder:DT"]
   - ["MCU:PD4", "Rotary_Encoder:SW"]
+  - ["MCU:PD7", "Mute_Button:SIG"]
 
   # Programming and Debug
   - ["MCU:PA0", "Programmer:UPDI"]
   - ["MCU:PB2", "Programmer:TX"]
   - ["MCU:PB3", "Programmer:RX"]
+
+  # LoRaWAN / SPI Connections
+  - ["MCU:PA6", "LoRa_Module:SCK"]
+  - ["MCU:PA5", "LoRa_Module:MISO"]
+  - ["MCU:PA4", "LoRa_Module:MOSI"]
+  - ["MCU:PA7", "LoRa_Module:NSS"]
+  - ["MCU:PF0", "LoRa_Module:RST"]
+  - ["MCU:PF1", "LoRa_Module:DIO0"]
+  - ["MCU:PC4", "LoRa_Module:DIO1"]
