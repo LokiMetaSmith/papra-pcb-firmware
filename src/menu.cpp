@@ -1,4 +1,5 @@
 #include "menu.h"
+#include "globals.h"
 #include "eeprom_config.h" // For saveConfig()
 
 // --- Menu State & Navigation Variables ---
@@ -13,7 +14,11 @@ void setupMenu() {
 void processMenuEvent(MenuEvent event) {
   switch (current_menu_state) {
     case STATE_HOME_SCREEN:
-      if (event == EVENT_NAV_SELECT) {
+      if (event == EVENT_NAV_UP) {
+        pressure_compensation += 1.0;
+      } else if (event == EVENT_NAV_DOWN) {
+        pressure_compensation -= 1.0;
+      } else if (event == EVENT_NAV_SELECT) {
         // Enter the main menu from the home screen
         current_menu_state = STATE_MAIN_MENU;
         selected_menu_item = 0;

@@ -1,5 +1,6 @@
 #include "display.h"
 #include "menu.h" // For menu states
+#include "main.h" // For getPressure()
 
 // Timer for display refresh
 static unsigned long last_display_update = 0;
@@ -14,7 +15,14 @@ void drawHomeScreen() {
   display.setCursor(0, 0);
 
   display.print(F("Press: ")); display.print((int)getPressure()); display.println(F(" Pa"));
-  display.print(F("Set:   ")); display.print((int)pid_setpoint); display.println(F(" Pa"));
+  display.print(F("Set:   ")); display.print((int)pid_setpoint);
+  if (pressure_compensation != 0.0) {
+    display.print(F(" ("));
+    if (pressure_compensation > 0) display.print(F("+"));
+    display.print((int)pressure_compensation);
+    display.print(F(")"));
+  }
+  display.println(F(" Pa"));
   display.print(F("Fan:   ")); display.print(fanRPM); display.println(F(" RPM"));
   display.print(F("State: ")); display.println(currentBreathState == STATE_INHALE ? "Inhale" : "Exhale");
   display.print(F("Mute:  ")); display.println(alerts_muted ? "ON" : "OFF");

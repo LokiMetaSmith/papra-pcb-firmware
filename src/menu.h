@@ -1,8 +1,6 @@
 #ifndef MENU_H
 #define MENU_H
 
-#include "globals.h"
-
 // Define the states of the menu
 enum MenuState {
   STATE_HOME_SCREEN,
@@ -19,6 +17,10 @@ enum MenuEvent {
   EVENT_NAV_DOWN,
   EVENT_NAV_SELECT
 };
+
+// Menu variables
+extern int selected_menu_item;
+extern MenuState current_menu_state;
 
 // Function prototypes
 void setupMenu();
