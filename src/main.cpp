@@ -50,6 +50,11 @@ double avg_peak_inhale_slope = 2.0; // Initial default
 double avg_peak_exhale_slope = -2.0; // Initial default
 double baseline_impedance = 0.0;
 double pressure_compensation = 0.0;
+bool learning_phase_active = true;
+unsigned long learning_phase_start_time = 0;
+float baseline_respiratory_rate = 15.0; // Default reasonable value
+int learning_breath_count = 0;
+float learning_rr_sum = 0.0;
 String serialCommand;
 bool apnea_alert_active = false;
 bool alerts_muted = false;
@@ -78,6 +83,7 @@ void setup() {
   // Initialize timers
   pid_last_time = millis();
   last_inhale_time = millis();
+  learning_phase_start_time = millis();
 
   // Set initial pin states
   digitalWrite(led1, HIGH);

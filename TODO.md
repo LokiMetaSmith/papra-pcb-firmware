@@ -31,9 +31,9 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
     - [x] Integrate a PID autotuning library.
     - [x] Add a serial command to trigger the autotuning process.
     - [x] Automatically save the new PID constants to EEPROM upon completion.
-- [ ] **Adaptive Thresholds:**
-    - [ ] Implement a "learning phase" to establish baseline respiratory rate for alerts.
-    - [ ] Rework breath trigger to "ramp" based on initial user breathing.
+- [x] **Adaptive Thresholds:**
+    - [x] Implement a "learning phase" to establish baseline respiratory rate for alerts.
+    - [x] Rework breath trigger to "ramp" based on initial user breathing.
 - [x] **Filter Lifecycle Management:**
     - [x] Add a `newfilter` command to run calibration and save the baseline impedance to EEPROM.
 - [x] **UI Enhancements:**

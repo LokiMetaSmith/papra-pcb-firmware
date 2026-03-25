@@ -60,6 +60,12 @@ extern double avg_peak_exhale_slope;
 extern double baseline_impedance;
 extern double pressure_compensation;
 
+extern bool learning_phase_active;
+extern unsigned long learning_phase_start_time;
+extern float baseline_respiratory_rate;
+extern int learning_breath_count;
+extern float learning_rr_sum;
+
 #include "menu.h" // For MenuState enum
 
 extern String serialCommand;

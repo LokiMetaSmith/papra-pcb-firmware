@@ -44,8 +44,16 @@ void checkAlerts() {
   }
 
   // Respiratory Rate Check
-  if (respiratory_rate > 0) {
-    if (respiratory_rate < 8 || respiratory_rate > 35) {
+  if (respiratory_rate > 0 && !learning_phase_active) {
+    // Determine dynamic thresholds based on baseline (+/- 50%)
+    float min_rr = baseline_respiratory_rate * 0.5;
+    float max_rr = baseline_respiratory_rate * 1.5;
+
+    // Clamp thresholds to absolute safe limits (e.g., min 8, max 35)
+    if (min_rr < 8.0) min_rr = 8.0;
+    if (max_rr > 35.0) max_rr = 35.0;
+
+    if (respiratory_rate < min_rr || respiratory_rate > max_rr) {
       Serial.println(F("ALERT: Abnormal respiratory rate!"));
       condition_found = true;
     }
