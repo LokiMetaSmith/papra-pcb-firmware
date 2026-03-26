@@ -5,7 +5,7 @@ This list tracks potential next steps and improvements for the PAPR firmware pro
 ## 1. Tuning & Calibration (Requires Hardware)
 - [ ] Tune PID controller constants (`Kp`, `Ki`, `Kd`).
 - [ ] Tune breath model trigger thresholds for inhale/exhale detection.
-- [ ] Tune alert system thresholds (apnea duration, respiratory rate limits).
+- [x] Tune alert system thresholds (apnea duration, respiratory rate limits).
 - [ ] Perform an initial calibration run to establish a baseline for filter health.
 
 ## 2. Feature Enhancements

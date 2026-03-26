@@ -35,7 +35,7 @@ void checkAlerts() {
   bool condition_found = false;
 
   // Apnea Detection
-  if (last_inhale_time > 0 && (millis() - last_inhale_time > 20000)) { // 20-second threshold
+  if (last_inhale_time > 0 && (millis() - last_inhale_time > apnea_duration_threshold)) {
     if (!apnea_alert_active) {
       Serial.println(F("ALERT: Apnea detected! Entering emergency ventilation mode."));
       apnea_alert_active = true;
@@ -49,9 +49,9 @@ void checkAlerts() {
     float min_rr = baseline_respiratory_rate * 0.5;
     float max_rr = baseline_respiratory_rate * 1.5;
 
-    // Clamp thresholds to absolute safe limits (e.g., min 8, max 35)
-    if (min_rr < 8.0) min_rr = 8.0;
-    if (max_rr > 35.0) max_rr = 35.0;
+    // Clamp thresholds to absolute safe limits
+    if (min_rr < rr_min_threshold) min_rr = rr_min_threshold;
+    if (max_rr > rr_max_threshold) max_rr = rr_max_threshold;
 
     if (respiratory_rate < min_rr || respiratory_rate > max_rr) {
       Serial.println(F("ALERT: Abnormal respiratory rate!"));

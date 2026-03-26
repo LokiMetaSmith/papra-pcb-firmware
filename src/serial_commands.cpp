@@ -194,8 +194,17 @@ void checkSerialCommands() {
           } else if (varName.equalsIgnoreCase("kd")) {
             Kd = varValue;
             Serial.print(F("Set Kd = ")); Serial.println(Kd);
+          } else if (varName.equalsIgnoreCase("apnea_duration")) {
+            apnea_duration_threshold = (uint32_t)varValue;
+            Serial.print(F("Set apnea_duration_threshold = ")); Serial.println(apnea_duration_threshold);
+          } else if (varName.equalsIgnoreCase("rr_min")) {
+            rr_min_threshold = (float)varValue;
+            Serial.print(F("Set rr_min_threshold = ")); Serial.println(rr_min_threshold);
+          } else if (varName.equalsIgnoreCase("rr_max")) {
+            rr_max_threshold = (float)varValue;
+            Serial.print(F("Set rr_max_threshold = ")); Serial.println(rr_max_threshold);
           } else {
-            Serial.println(F("Unknown variable. Use kp, ki, or kd."));
+            Serial.println(F("Unknown variable. Use kp, ki, kd, apnea_duration, rr_min, or rr_max."));
           }
         } else {
           Serial.println(F("Invalid set command. Use: set <var> <value>"));
