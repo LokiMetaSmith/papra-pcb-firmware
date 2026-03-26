@@ -22,6 +22,9 @@ struct Config {
   double Ki;
   double Kd;
   double baseline_impedance;
+  uint32_t apnea_duration_threshold;
+  float rr_min_threshold;
+  float rr_max_threshold;
 };
 
 #include <Adafruit_SSD1306.h>
@@ -59,6 +62,10 @@ extern double avg_peak_inhale_slope;
 extern double avg_peak_exhale_slope;
 extern double baseline_impedance;
 extern double pressure_compensation;
+
+extern uint32_t apnea_duration_threshold;
+extern float rr_min_threshold;
+extern float rr_max_threshold;
 
 extern bool learning_phase_active;
 extern unsigned long learning_phase_start_time;

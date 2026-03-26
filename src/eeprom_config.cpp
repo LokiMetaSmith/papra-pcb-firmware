@@ -14,6 +14,9 @@ void loadConfig() {
     Ki = cfg.Ki;
     Kd = cfg.Kd;
     baseline_impedance = cfg.baseline_impedance;
+    apnea_duration_threshold = cfg.apnea_duration_threshold;
+    rr_min_threshold = cfg.rr_min_threshold;
+    rr_max_threshold = cfg.rr_max_threshold;
   } else {
     // EEPROM is not initialized or data is corrupt
     // Load default values and save them
@@ -31,6 +34,9 @@ void saveConfig() {
   cfg.Ki = Ki;
   cfg.Kd = Kd;
   cfg.baseline_impedance = baseline_impedance;
+  cfg.apnea_duration_threshold = apnea_duration_threshold;
+  cfg.rr_min_threshold = rr_min_threshold;
+  cfg.rr_max_threshold = rr_max_threshold;
 
   EEPROM.put(0, cfg);
   Serial.println(F("Configuration saved to EEPROM."));

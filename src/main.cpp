@@ -51,6 +51,11 @@ double avg_peak_inhale_slope = 2.0; // Initial default
 double avg_peak_exhale_slope = -2.0; // Initial default
 double baseline_impedance = 0.0;
 double pressure_compensation = 0.0;
+
+uint32_t apnea_duration_threshold = 20000;
+float rr_min_threshold = 8.0;
+float rr_max_threshold = 35.0;
+
 bool learning_phase_active = true;
 unsigned long learning_phase_start_time = 0;
 float baseline_respiratory_rate = 15.0; // Default reasonable value
