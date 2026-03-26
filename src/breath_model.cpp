@@ -47,12 +47,15 @@ void updateBreathModel(double raw_pressure) {
       currentBreathState = STATE_INHALE;
 
       // Update the running average of the peak slopes
-      // Using a simple moving average with a factor of 0.2 (i.e., last 5 breaths)
+      // During the learning phase, adapt more quickly (factor of 0.5)
+      // Otherwise, use a simple moving average with a factor of 0.2 (i.e., last 5 breaths)
+      float learning_rate = learning_phase_active ? 0.5 : 0.2;
+
       if (peak_inhale_slope > 0) { // Only update if we had a valid peak
-        avg_peak_inhale_slope = (0.8 * avg_peak_inhale_slope) + (0.2 * peak_inhale_slope);
+        avg_peak_inhale_slope = ((1.0 - learning_rate) * avg_peak_inhale_slope) + (learning_rate * peak_inhale_slope);
       }
       if (peak_exhale_slope < 0) { // Only update if we had a valid peak
-        avg_peak_exhale_slope = (0.8 * avg_peak_exhale_slope) + (0.2 * peak_exhale_slope);
+        avg_peak_exhale_slope = ((1.0 - learning_rate) * avg_peak_exhale_slope) + (learning_rate * peak_exhale_slope);
       }
 
       // Reset the peak inhale slope for the new phase
@@ -63,6 +66,25 @@ void updateBreathModel(double raw_pressure) {
       if (last_inhale_time > 0) {
         double interval_s = (double)(now - last_inhale_time) / 1000.0;
         respiratory_rate = 60.0 / interval_s;
+
+        // --- Learning Phase for Adaptive Thresholds ---
+        if (learning_phase_active) {
+          // If we are within the first 60 seconds of learning
+          if (now - learning_phase_start_time < 60000) {
+            learning_rr_sum += respiratory_rate;
+            learning_breath_count++;
+          } else {
+            // Learning phase is over
+            learning_phase_active = false;
+            if (learning_breath_count > 0) {
+              baseline_respiratory_rate = learning_rr_sum / learning_breath_count;
+            } else {
+              baseline_respiratory_rate = 15.0; // Fallback default
+            }
+            Serial.print(F("Learning phase complete. Baseline RR: "));
+            Serial.println(baseline_respiratory_rate);
+          }
+        }
       }
       last_inhale_time = now;
 
