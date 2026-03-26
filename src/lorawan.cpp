@@ -1,5 +1,51 @@
 #include "lorawan.h"
 
+static uint8_t mydata[16];
+const unsigned TX_INTERVAL = 60; // Schedule TX every this many seconds (might become longer due to duty cycle limitations).
+
+#if defined(STM32WL54CC)
+
+STM32LoRaWAN modem;
+static unsigned long last_send_time = 0;
+
+void setupLoRaWAN() {
+    Serial.println("Initializing LoRaWAN...");
+    modem.begin(US915);
+    // Note: To join a network, you would normally configure DevEUI, AppEUI, and AppKey
+    // using modem.joinOTAA(appEui, appKey, devEui);
+    // For now, this just initializes the internal radio correctly.
+    Serial.println("STM32WL54CC LoRaWAN Initialized");
+}
+
+void loopLoRaWAN() {
+    unsigned long current_time = millis();
+    if (current_time - last_send_time > TX_INTERVAL * 1000) {
+        last_send_time = current_time;
+
+        uint16_t pres = (uint16_t)ipap_pressure;
+        uint16_t rpm = (uint16_t)fanRPM;
+        uint8_t batt = (uint8_t)batteryState;
+
+        mydata[0] = (pres >> 8) & 0xFF;
+        mydata[1] = pres & 0xFF;
+        mydata[2] = (rpm >> 8) & 0xFF;
+        mydata[3] = rpm & 0xFF;
+        mydata[4] = batt;
+
+        // In a real application, you'd check modem.connected()
+        modem.beginPacket();
+        modem.write(mydata, 5);
+        int err = modem.endPacket(true);
+        if (err > 0) {
+            Serial.println("Packet sent!");
+        } else {
+            Serial.println("Error sending packet");
+        }
+    }
+}
+
+#else
+
 // This EUI must be in little-endian format, so least-significant-byte
 // first. When copying an EUI from ttnctl output, this means to reverse
 // the bytes. For TTN issued EUIs the last bytes should be 0xD5, 0xB3,
@@ -17,9 +63,7 @@ void os_getDevEui (u1_t* buf) { memcpy_P(buf, DEVEUI, 8); }
 static const u1_t PROGMEM APPKEY[16] = { 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C };
 void os_getDevKey (u1_t* buf) { memcpy_P(buf, APPKEY, 16); }
 
-static uint8_t mydata[16];
 static osjob_t sendjob;
-const unsigned TX_INTERVAL = 60; // Schedule TX every this many seconds (might become longer due to duty cycle limitations).
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -145,3 +189,5 @@ void setupLoRaWAN() {
 void loopLoRaWAN() {
     os_runloop_once();
 }
+
+#endif

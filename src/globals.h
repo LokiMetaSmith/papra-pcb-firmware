@@ -74,6 +74,28 @@ extern bool alerts_muted;
 extern bool alert_active;
 extern MenuState current_menu_state;
 
+#if defined(STM32WL54CC)
+// Pin definitions for STM32WL54CC
+const int led1        = PB5;
+const int led2        = PB4;
+const int led3        = PB3;
+const int led4        = PB2;
+const int PWMPin      = PA0;
+const int buzzerPin   = PA1;
+const int tachPin     = PA2;
+const int analogPot   = PA3;
+const int analogBatt  = PA4;
+const int rotary_A_pin = PA5;
+const int rotary_B_pin = PA6;
+const int rotary_SW_pin = PA7;
+const int muteButtonPin = PA8;
+
+// LoRaWAN pins
+const int lora_NSS_pin = PA9;
+const int lora_RST_pin = PA10;
+const int lora_DIO0_pin = PA11;
+const int lora_DIO1_pin = PA12;
+#else
 // Pin definitions for AVR128DA28 (28-pin)
 const int led1        = PIN_PC0;
 const int led2        = PIN_PC1;
@@ -96,7 +118,8 @@ const int muteButtonPin = PIN_PD7;
 const int lora_NSS_pin = PIN_PA7;
 const int lora_RST_pin = PIN_PF0;
 const int lora_DIO0_pin = PIN_PF1;
-const int lora_DIO1_pin = PIN_PC4; // PF2 does not exist on 28-pin. Using PC4.
+const int lora_DIO1_pin = PIN_PA4; // PF2 does not exist on 28-pin. Using PA4.
+#endif
 
 // Constants (can be defined in header)
 const int battADCMax  =  1023;

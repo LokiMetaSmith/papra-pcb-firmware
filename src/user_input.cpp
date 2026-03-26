@@ -1,6 +1,12 @@
 #include "user_input.h"
 #include "globals.h"
 #include "menu.h"
+
+// Ensure the ENCODER_DO_NOT_USE_INTERRUPTS macro is available before including Encoder.h
+#if !defined(ENCODER_DO_NOT_USE_INTERRUPTS)
+#define ENCODER_DO_NOT_USE_INTERRUPTS
+#endif
+
 #include <Encoder.h>
 
 // Create Encoder object
